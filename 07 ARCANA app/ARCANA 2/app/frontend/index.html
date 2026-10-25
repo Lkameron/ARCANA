@@ -1,0 +1,4326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ARCANA — lncRNA Network Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+  /* ── TOKENS ── */
+  :root {
+    --midnight:   #0f1117;
+    --navy:       #161c2d;
+    --navy-light: #1e2740;
+    --cream:      #f5f0e8;
+    --cream-dim:  #ede7d9;
+    --rose:       #c97d7d;
+    --rose-light: #e8b4b4;
+    --sage:       #7aab8a;
+    --sage-light: #a8cdb5;
+    --gold:       #c9a96e;
+    --muted:      #8892aa;
+    --card-bg:    rgba(30,39,64,0.7);
+    --border:     rgba(201,169,110,0.18);
+    --glow-rose:  rgba(201,125,125,0.15);
+    --glow-sage:  rgba(122,171,138,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--midnight);
+    color: var(--cream);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--navy); }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+  /* ── CANVAS HERO ── */
+  #hero-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.45;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 3rem;
+    background: rgba(15,17,23,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+  }
+  .nav-logo span { color: var(--cream); font-style: italic; font-weight: 400; }
+
+  .nav-links {
+    display: flex; gap: 2.4rem;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cream); }
+
+  .nav-badge {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    color: var(--sage);
+    letter-spacing: 0.06em;
+  }
+  .nav-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── HERO SECTION ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rose);
+    margin-bottom: 1.6rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid rgba(201,125,125,0.3);
+    border-radius: 2rem;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3.2rem, 7vw, 6rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--cream);
+    max-width: 820px;
+    margin-bottom: 0.4rem;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .hero-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+    max-width: 560px;
+  }
+
+  .hero-desc {
+    font-size: 0.9rem;
+    color: var(--muted);
+    max-width: 480px;
+    margin-bottom: 3.2rem;
+    line-height: 1.8;
+  }
+
+  .hero-ctas {
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 4rem;
+  }
+
+  .btn-primary {
+    padding: 0.85rem 2.2rem;
+    background: linear-gradient(135deg, var(--rose) 0%, #b06060 100%);
+    color: var(--cream);
+    border: none;
+    border-radius: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 24px rgba(201,125,125,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(201,125,125,0.45);
+  }
+
+  .btn-secondary {
+    padding: 0.85rem 2.2rem;
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-secondary:hover {
+    background: var(--card-bg);
+    border-color: var(--gold);
+  }
+
+  .hero-stats {
+    display: flex; gap: 3rem; flex-wrap: wrap; justify-content: center;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* ── SECTION WRAPPER ── */
+  section {
+    position: relative;
+    z-index: 1;
+    padding: 5rem 3rem;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  .section-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 0.8rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 600;
+    color: var(--cream);
+    line-height: 1.2;
+    margin-bottom: 0.8rem;
+  }
+  .section-title em { font-style: italic; color: var(--rose-light); }
+
+  .section-lead {
+    font-size: 0.9rem;
+    color: var(--muted);
+    max-width: 540px;
+    line-height: 1.8;
+    margin-bottom: 3rem;
+  }
+
+  /* ── UPLOAD SECTION ── */
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .upload-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glow-rose);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .upload-card:hover::before { opacity: 1; }
+  .upload-card:hover {
+    border-color: rgba(201,125,125,0.4);
+    box-shadow: 0 8px 40px var(--glow-rose);
+  }
+
+  .upload-card.sage-glow:hover::before { background: var(--glow-sage); }
+  .upload-card.sage-glow:hover {
+    border-color: rgba(122,171,138,0.4);
+    box-shadow: 0 8px 40px var(--glow-sage);
+  }
+
+  .upload-icon {
+    width: 48px; height: 48px;
+    border-radius: 0.6rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+  .upload-icon.rose { background: rgba(201,125,125,0.12); }
+  .upload-icon.sage { background: rgba(122,171,138,0.12); }
+  .upload-icon.gold { background: rgba(201,169,110,0.12); }
+
+  .upload-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 0.4rem;
+  }
+
+  .upload-card p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed rgba(201,169,110,0.3);
+    border-radius: 0.7rem;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--gold);
+    background: rgba(201,169,110,0.05);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-zone-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .drop-zone-text {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .drop-zone-text strong {
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  .file-tag {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(201,169,110,0.1);
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 0.3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    margin-right: 0.4rem;
+    margin-top: 0.8rem;
+  }
+
+  /* span entire grid width */
+  .upload-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* ── ANALYSIS SELECTOR ── */
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .analysis-pill {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    user-select: none;
+  }
+
+  .analysis-pill.selected {
+    border-color: var(--rose);
+    background: rgba(201,125,125,0.08);
+    box-shadow: 0 0 0 1px rgba(201,125,125,0.2), 0 4px 20px var(--glow-rose);
+  }
+
+  .analysis-pill.selected.sage-sel {
+    border-color: var(--sage);
+    background: rgba(122,171,138,0.08);
+    box-shadow: 0 0 0 1px rgba(122,171,138,0.2), 0 4px 20px var(--glow-sage);
+  }
+
+  .analysis-pill:hover:not(.selected) {
+    border-color: rgba(201,169,110,0.3);
+    background: rgba(201,169,110,0.03);
+  }
+
+  .pill-check {
+    width: 18px; height: 18px; min-width: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 0.1rem;
+    transition: all 0.2s;
+  }
+  .selected .pill-check {
+    background: var(--rose);
+    border-color: var(--rose);
+    color: white;
+    font-size: 0.6rem;
+  }
+  .selected.sage-sel .pill-check {
+    background: var(--sage);
+    border-color: var(--sage);
+  }
+
+  .pill-text h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 0.2rem;
+  }
+  .pill-text p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── PLOT SELECTOR ── */
+  .plot-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .plot-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .plot-card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px rgba(201,169,110,0.3), 0 4px 24px rgba(201,169,110,0.12);
+  }
+
+  .plot-card:hover:not(.selected) {
+    border-color: rgba(201,169,110,0.25);
+    transform: translateY(-2px);
+  }
+
+  .plot-preview {
+    width: 100%;
+    height: 90px;
+    border-radius: 0.5rem;
+    margin-bottom: 0.8rem;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* SVG mini plot previews */
+  .mini-heatmap { background: linear-gradient(135deg, #1e2740 0%, #0f1117 100%); }
+  .mini-network { background: radial-gradient(ellipse at 50% 50%, #1e3320 0%, #0f1117 100%); }
+  .mini-volcano { background: linear-gradient(180deg, #221525 0%, #0f1117 100%); }
+  .mini-boxplot { background: linear-gradient(135deg, #1e1e2d 0%, #0f1117 100%); }
+  .mini-dendrogram { background: linear-gradient(135deg, #1a1e20 0%, #0f1117 100%); }
+  .mini-eigengene { background: linear-gradient(135deg, #1e2018 0%, #0f1117 100%); }
+  .mini-upset { background: linear-gradient(135deg, #1e1825 0%, #0f1117 100%); }
+  .mini-sankey { background: linear-gradient(135deg, #1a1e22 0%, #0f1117 100%); }
+
+  .plot-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--cream);
+    margin-bottom: 0.2rem;
+  }
+  .plot-tag {
+    font-size: 0.66rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .selected-badge {
+    position: absolute;
+    top: 0.5rem; right: 0.5rem;
+    width: 18px; height: 18px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 0.6rem;
+    color: var(--midnight);
+    font-weight: 700;
+  }
+  .plot-card.selected .selected-badge { display: flex; }
+
+  /* ── OUTPUT CONFIG ── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .config-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .config-input {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.9rem;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .config-input:focus { border-color: var(--gold); }
+  .config-input::placeholder { color: var(--muted); opacity: 0.6; }
+
+  select.config-input {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238892aa'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    padding-right: 2rem;
+  }
+
+  /* ── RUN BUTTON ── */
+  .run-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .run-summary {
+    display: flex; gap: 2rem; flex-wrap: wrap;
+  }
+
+  .run-item {
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .run-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .run-dot.rose { background: var(--rose); }
+  .run-dot.sage { background: var(--sage); }
+  .run-dot.gold { background: var(--gold); }
+  .run-item span {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .run-item strong {
+    color: var(--cream);
+    font-weight: 600;
+  }
+
+  .btn-run {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 1rem 2.8rem;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--gold) 100%);
+    color: var(--midnight);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 28px rgba(201,125,125,0.35);
+    white-space: nowrap;
+  }
+  .btn-run:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(201,125,125,0.5);
+  }
+  .btn-run:active { transform: translateY(0); }
+
+  /* ── PIPELINE STATUS ── */
+  .pipeline-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .pipeline-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .pipeline-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(201,169,110,0.07);
+    position: relative;
+  }
+  .pipeline-step:last-child { border-bottom: none; }
+
+  .step-line {
+    position: absolute;
+    left: 15px;
+    top: 3rem;
+    bottom: 0;
+    width: 1px;
+    background: rgba(201,169,110,0.12);
+  }
+  .pipeline-step:last-child .step-line { display: none; }
+
+  .step-icon {
+    width: 32px; height: 32px; min-width: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    z-index: 1;
+  }
+  .step-icon.waiting {
+    background: rgba(136,146,170,0.1);
+    border: 1px solid rgba(136,146,170,0.2);
+    color: var(--muted);
+  }
+  .step-icon.done {
+    background: rgba(122,171,138,0.15);
+    border: 1px solid rgba(122,171,138,0.3);
+    color: var(--sage);
+  }
+  .step-icon.active {
+    background: rgba(201,125,125,0.15);
+    border: 1px solid rgba(201,125,125,0.4);
+    color: var(--rose);
+    animation: spin-glow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes spin-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,125,125,0.3); }
+    50% { box-shadow: 0 0 0 5px rgba(201,125,125,0); }
+  }
+
+  .step-info h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 0.2rem;
+  }
+  .step-info p {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .step-badge {
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-waiting { background: rgba(136,146,170,0.1); color: var(--muted); }
+  .badge-ready   { background: rgba(122,171,138,0.12); color: var(--sage); }
+  .badge-queued  { background: rgba(201,169,110,0.1); color: var(--gold); }
+
+  /* ── RESULTS PREVIEW ── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .result-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .result-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 0.3rem;
+  }
+  .result-card .sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+
+  .placeholder-plot {
+    width: 100%;
+    height: 220px;
+    border-radius: 0.6rem;
+    background: var(--navy);
+    border: 1px dashed rgba(201,169,110,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .placeholder-plot span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .hub-gene-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .hub-gene-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    background: rgba(201,169,110,0.04);
+    border: 1px solid rgba(201,169,110,0.1);
+    border-radius: 0.4rem;
+  }
+
+  .gene-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--cream);
+  }
+  .gene-type {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.2rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .type-lnc { background: rgba(201,125,125,0.12); color: var(--rose); }
+  .type-pc  { background: rgba(122,171,138,0.12); color: var(--sage); }
+
+  .gene-kme {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold);
+  }
+
+  /* ── HISTORY SECTION ── */
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .history-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.2rem;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .history-card:hover { border-color: rgba(201,169,110,0.3); }
+
+  .history-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+  .history-organ {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.3rem;
+  }
+  .organ-heart   { background: rgba(201,125,125,0.12); color: var(--rose); }
+  .organ-liver   { background: rgba(122,171,138,0.12); color: var(--sage); }
+  .organ-adipose { background: rgba(201,169,110,0.12); color: var(--gold); }
+
+  .history-date {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .history-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 0.4rem;
+  }
+  .history-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  .history-actions {
+    display: flex; gap: 0.6rem;
+  }
+  .history-btn {
+    flex: 1;
+    padding: 0.4rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .history-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 2rem 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    padding: 3rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+  }
+
+  .footer-links {
+    display: flex; gap: 1.8rem; list-style: none;
+  }
+  .footer-links a {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cream); }
+
+  .footer-copy {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--navy-light);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.6rem;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--rose), var(--gold));
+    transition: width 0.4s ease;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    z-index: 999;
+    padding: 1rem 1.5rem;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--sage);
+    border-radius: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--cream);
+    backdrop-filter: blur(12px);
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    max-width: 300px;
+  }
+  #toast.show { transform: translateX(0); }
+  #toast .toast-title { font-weight: 600; color: var(--sage); margin-bottom: 0.2rem; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    section { padding: 3rem 1.5rem; }
+    .upload-grid, .config-grid { grid-template-columns: 1fr; }
+    .analysis-grid { grid-template-columns: 1fr 1fr; }
+    .plot-grid { grid-template-columns: repeat(2, 1fr); }
+    .results-grid { grid-template-columns: 1fr; }
+    .history-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; }
+  }
+
+  /* ══ NETWORK VISUALISER ══ */
+  .viz-shell {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+
+  .viz-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .viz-toolbar-left, .viz-toolbar-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+  .viz-btn {
+    padding: 0.3rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    color: var(--muted);
+    font-size: 0.73rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .viz-btn:hover, .viz-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,169,110,0.06); }
+
+  .viz-sep { width: 1px; height: 18px; background: var(--border); margin: 0 0.3rem; }
+  .viz-stat { font-size: 0.75rem; color: var(--muted); padding: 0 0.3rem; }
+  .viz-stat strong { color: var(--cream); }
+
+  .viz-body {
+    position: relative;
+    width: 100%;
+    height: 480px;
+  }
+
+  #net-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+  #net-canvas:active { cursor: grabbing; }
+
+  /* gene info panel */
+  .gene-panel {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    width: 240px;
+    background: rgba(15,17,23,0.92);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1rem;
+    backdrop-filter: blur(16px);
+    display: none;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateX(12px); } to { opacity:1; transform: translateX(0); } }
+
+  .gene-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+  .gene-panel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cream);
+  }
+  .gene-panel-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(201,169,110,0.06);
+  }
+  .gp-val { color: var(--cream); font-weight: 500; text-align: right; }
+  .lnc-val { color: var(--rose); }
+  .gold-val { color: var(--gold); font-family: 'JetBrains Mono', monospace; }
+  .rose-val { color: var(--rose-light); font-family: 'JetBrains Mono', monospace; }
+  .mono-val { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; }
+  .gene-panel-divider { height: 1px; background: var(--border); margin: 0.5rem 0; }
+  .gene-panel-btn {
+    width: 100%; margin-top: 0.7rem;
+    padding: 0.45rem;
+    background: rgba(201,169,110,0.08);
+    border: 1px solid rgba(201,169,110,0.25);
+    border-radius: 0.4rem;
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .gene-panel-btn:hover { background: rgba(201,169,110,0.15); }
+
+  .viz-legend {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    padding: 0.75rem 1.2rem;
+    border-top: 1px solid var(--border);
+  }
+  .legend-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .legend-item {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.75rem; color: var(--muted);
+    cursor: pointer; transition: color 0.15s;
+  }
+  .legend-item:hover { color: var(--cream); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ══ MULTI-ORGAN COMPARISON ══ */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .compare-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+  }
+  .wide-card { /* spans normally */ }
+
+  .compare-card-header { margin-bottom: 1.2rem; }
+  .compare-card-header h3 { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--cream); margin-bottom: 0.25rem; }
+  .compare-card-header p { font-size: 0.75rem; color: var(--muted); }
+
+  .matrix-wrap { overflow-x: auto; }
+
+  .overlap-matrix {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+  }
+  .overlap-matrix th {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 500;
+    text-align: center;
+    padding: 0.3rem 0.5rem;
+  }
+  .overlap-matrix td {
+    text-align: center;
+    padding: 0.6rem 0.4rem;
+    border-radius: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s;
+    min-width: 60px;
+  }
+  .overlap-matrix td:hover { transform: scale(1.06); }
+  .cell-high   { background: rgba(122,171,138,0.35); color: var(--sage-light); }
+  .cell-med    { background: rgba(201,169,110,0.25); color: var(--gold); }
+  .cell-low    { background: rgba(201,125,125,0.2);  color: var(--rose-light); }
+  .cell-self   { background: rgba(201,169,110,0.08); color: var(--muted); font-style: italic; }
+  .cell-empty  { background: rgba(136,146,170,0.06); color: var(--muted); }
+
+  .organ-chip {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .heart-chip   { background: rgba(201,125,125,0.15); color: var(--rose); }
+  .liver-chip   { background: rgba(122,171,138,0.15); color: var(--sage); }
+  .adipose-chip { background: rgba(201,169,110,0.15); color: var(--gold); }
+  .muscle-chip  { background: rgba(92,155,212,0.15);  color: #5c9bd4; }
+  .kidney-chip  { background: rgba(180,130,200,0.15); color: #b482c8; }
+
+  .shared-gene-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .shared-gene-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    background: rgba(201,169,110,0.04);
+    border: 1px solid rgba(201,169,110,0.1);
+    border-radius: 0.4rem;
+    font-size: 0.78rem;
+  }
+  .shared-gene-row .sg-name { font-family: 'JetBrains Mono', monospace; color: var(--cream); min-width: 80px; }
+  .shared-gene-row .sg-organs { display: flex; gap: 0.3rem; flex-wrap: wrap; flex: 1; }
+  .sg-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sg-count { font-size: 0.7rem; color: var(--gold); font-weight: 600; margin-left: auto; white-space: nowrap; }
+
+  .organ-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+
+  .organ-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.1rem;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    backdrop-filter: blur(8px);
+  }
+  .organ-card:hover { border-color: rgba(201,169,110,0.35); transform: translateY(-2px); }
+  .organ-card.active { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(201,169,110,0.2); }
+
+  .organ-icon {
+    width: 38px; height: 38px;
+    border-radius: 0.5rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+  }
+  .organ-name { font-size: 0.82rem; font-weight: 600; color: var(--cream); }
+  .organ-stats { font-size: 0.7rem; color: var(--muted); }
+  .organ-bar-wrap { height: 3px; background: rgba(201,169,110,0.1); border-radius: 2px; }
+  .organ-bar { height: 3px; border-radius: 2px; transition: width 0.6s ease; }
+  .organ-kme { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--gold); }
+
+  /* ══ RESULTS DASHBOARD ══ */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .dash-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .dash-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .dash-header h3 { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--cream); }
+  .dash-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .table-wrap { overflow-x: auto; overflow-y: auto; max-height: 320px; }
+
+  .de-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .de-table thead th {
+    position: sticky; top: 0;
+    padding: 0.6rem 0.8rem;
+    background: var(--navy-light);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    user-select: none;
+  }
+  .de-table thead th:hover { color: var(--gold); }
+  .sort-icon { opacity: 0.4; margin-left: 0.2rem; }
+
+  .de-table tbody tr {
+    border-bottom: 1px solid rgba(201,169,110,0.06);
+    transition: background 0.1s;
+  }
+  .de-table tbody tr:hover { background: rgba(201,169,110,0.04); }
+  .de-table td {
+    padding: 0.55rem 0.8rem;
+    color: var(--cream);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .fc-up   { color: var(--rose); font-family: 'JetBrains Mono', monospace; }
+  .fc-down { color: var(--sage); font-family: 'JetBrains Mono', monospace; }
+  .padj-val { font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .hub-star { color: var(--gold); font-size: 0.9rem; }
+  .kme-val  { font-family: 'JetBrains Mono', monospace; color: var(--gold); }
+
+  .table-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* enrichment */
+  .enrich-list { display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; max-height: 340px; }
+  .enrich-item {
+    display: flex; flex-direction: column; gap: 0.3rem;
+    padding: 0.7rem 0.8rem;
+    background: rgba(201,169,110,0.03);
+    border: 1px solid rgba(201,169,110,0.08);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .enrich-item:hover { border-color: rgba(201,169,110,0.25); }
+  .enrich-term { font-size: 0.78rem; color: var(--cream); font-weight: 500; }
+  .enrich-meta { font-size: 0.68rem; color: var(--muted); display: flex; gap: 0.8rem; }
+  .enrich-bar-wrap { height: 3px; background: rgba(122,171,138,0.1); border-radius: 2px; margin-top: 0.1rem; }
+  .enrich-bar { height: 3px; background: var(--sage); border-radius: 2px; }
+  .enrich-pval { color: var(--rose-light); font-family: 'JetBrains Mono', monospace; }
+
+  /* ══ DOWNLOAD MANAGER ══ */
+  .dl-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .dl-group {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.2rem;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .dl-group-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.2rem;
+  }
+
+  .dl-item {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.7rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .dl-item:hover { background: rgba(201,169,110,0.04); border-color: rgba(201,169,110,0.15); }
+  .dl-item.downloading { border-color: var(--sage); background: rgba(122,171,138,0.05); }
+  .dl-item.done { border-color: rgba(122,171,138,0.2); }
+
+  .dl-highlight {
+    background: rgba(201,169,110,0.05);
+    border-color: rgba(201,169,110,0.2) !important;
+  }
+
+  .dl-icon { font-size: 1.2rem; width: 28px; text-align: center; }
+  .dl-info { flex: 1; }
+  .dl-name { font-size: 0.78rem; font-weight: 500; color: var(--cream); font-family: 'JetBrains Mono', monospace; margin-bottom: 0.15rem; }
+  .dl-meta { font-size: 0.68rem; color: var(--muted); }
+  .dl-size { font-size: 0.7rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+
+  .dl-btn {
+    padding: 0.3rem 0.6rem;
+    background: rgba(201,169,110,0.08);
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 0.35rem;
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+  }
+  .dl-btn:hover { background: rgba(201,169,110,0.18); }
+  .dl-btn-gold { background: var(--gold); color: var(--midnight); border-color: var(--gold); }
+  .dl-btn-gold:hover { background: #d4b87a; }
+
+  /* ══ SETTINGS PANEL ══ */
+  #settings-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,17,23,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+  }
+  #settings-overlay.open { display: block; }
+
+  #settings-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 360px;
+    background: var(--navy);
+    border-left: 1px solid var(--border);
+    z-index: 201;
+    padding: 2rem 1.5rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  #settings-panel.open { transform: translateX(0); }
+
+  .settings-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.8rem;
+  }
+
+  .settings-section {
+    margin-bottom: 1.8rem;
+  }
+  .settings-section-title {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(201,169,110,0.05);
+  }
+
+  /* toggle switch */
+  .toggle-wrap { display: flex; align-items: center; cursor: pointer; }
+  .toggle-wrap input { display: none; }
+  .toggle-track {
+    width: 36px; height: 20px;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .toggle-wrap input:checked + .toggle-track {
+    background: rgba(122,171,138,0.3);
+    border-color: var(--sage);
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-wrap input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(16px);
+    background: var(--sage);
+  }
+
+  /* settings trigger */
+  #settings-trigger {
+    position: fixed;
+    bottom: 2rem; left: 2rem;
+    z-index: 99;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  #settings-trigger:hover { border-color: var(--gold); color: var(--gold); }
+
+  @media (max-width: 900px) {
+    .compare-grid, .dash-grid { grid-template-columns: 1fr; }
+    .organ-summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .dl-grid { grid-template-columns: 1fr; }
+    #settings-panel { width: 100%; }
+    .viz-body { height: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Animated network canvas -->
+<canvas id="hero-canvas"></canvas>
+
+<!-- ── NAVIGATION ── -->
+<nav>
+  <div class="nav-logo">ARCANA <span>/ lncRNA</span></div>
+  <ul class="nav-links">
+    <li><a href="#upload">Upload</a></li>
+    <li><a href="#analysis">Analysis</a></li>
+    <li><a href="#plots">Plots</a></li>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#network-viz">Network</a></li>
+    <li><a href="#compare">Compare</a></li>
+    <li><a href="#results-dashboard">Results</a></li>
+    <li><a href="#downloads">Export</a></li>
+    <li><a href="#history">History</a></li>
+  </ul>
+  <div class="nav-badge">Pipeline v2.1 · connected</div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-eyebrow" id="project-eyebrow">
+    lncRNA · Co-expression · Bulk RNA-seq
+  </div>
+  <h1 class="hero-title">
+    Decode the <em>non-coding</em><br/>architecture of disease
+  </h1>
+  <p class="hero-subtitle" id="project-subtitle">Bulk RNA-seq analysis, beautifully done.</p>
+  <p class="hero-desc" id="project-desc">
+    Upload your count matrix and metadata, choose your comparisons, and let ARCANA identify hub lncRNAs, build co-expression networks, and run differential expression — on any dataset.
+  </p>
+  <div class="hero-ctas">
+    <button class="btn-primary" onclick="document.getElementById('upload').scrollIntoView({behavior:'smooth'})">
+      Start Analysis →
+    </button>
+    <button class="btn-secondary">View GitHub Pipeline</button>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num" id="stat-modules">—</div>
+      <div class="stat-label" id="stat-modules-label">WGCNA modules</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-de">—</div>
+      <div class="stat-label" id="stat-de-label">Sig. DE genes</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-comparisons">—</div>
+      <div class="stat-label">Comparisons</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-figures">—</div>
+      <div class="stat-label">Figures ready</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── UPLOAD ── -->
+<section id="upload">
+  <div class="section-eyebrow">Step 01 — Data Input</div>
+  <h2 class="section-title">Upload your <em>expression data</em></h2>
+  <p class="section-lead">
+    Accepts raw count matrices, normalized expression tables, or pre-processed TPM/FPKM files. ARCANA handles the biotype filtering automatically.
+  </p>
+
+  <div class="upload-grid">
+    <!-- Count matrix -->
+    <div class="upload-card">
+      <div class="upload-icon rose">📊</div>
+      <h3>Count Matrix</h3>
+      <p>Raw or normalized count matrix. Genes as rows, samples as columns. Supports .csv, .tsv, .txt</p>
+      <div class="drop-zone" id="dz-counts" ondragover="dzDrag(event,'dz-counts')" ondragleave="dzLeave('dz-counts')" ondrop="dzDrop(event,'dz-counts','counts-files')">
+        <input type="file" accept=".csv,.tsv,.txt,.gz" multiple onchange="handleFiles(event,'counts-files')"/>
+        <span class="drop-zone-icon">🧬</span>
+        <div class="drop-zone-text"><strong>Click or drag</strong> count matrix here</div>
+        <div class="file-tag-wrap" id="counts-files"></div>
+      </div>
+    </div>
+
+    <!-- Sample metadata -->
+    <div class="upload-card sage-glow">
+      <div class="upload-icon sage">🏷️</div>
+      <h3>Sample Metadata</h3>
+      <p>Sample condition, tissue/organ of origin, patient ID, disease status. Minimum: SampleID + Condition columns — must match your <code>config/project.yaml</code> settings.</p>
+      <div class="drop-zone" id="dz-meta" ondragover="dzDrag(event,'dz-meta')" ondragleave="dzLeave('dz-meta')" ondrop="dzDrop(event,'dz-meta','meta-files')">
+        <input type="file" accept=".csv,.tsv,.txt" multiple onchange="handleFiles(event,'meta-files')"/>
+        <span class="drop-zone-icon">🗂️</span>
+        <div class="drop-zone-text"><strong>Click or drag</strong> metadata here</div>
+        <div class="file-tag-wrap" id="meta-files"></div>
+      </div>
+    </div>
+
+    <!-- GTF annotation -->
+    <div class="upload-card">
+      <div class="upload-icon gold">📌</div>
+      <h3>GTF Annotation</h3>
+      <p>GENCODE or Ensembl GTF for biotype classification. lncRNAs, pseudogenes, and protein-coding genes will be separated automatically.</p>
+      <div class="drop-zone" id="dz-gtf" ondragover="dzDrag(event,'dz-gtf')" ondragleave="dzLeave('dz-gtf')" ondrop="dzDrop(event,'dz-gtf','gtf-files')">
+        <input type="file" accept=".gtf,.gtf.gz,.gff,.gff3" onchange="handleFiles(event,'gtf-files')"/>
+        <span class="drop-zone-icon">🔬</span>
+        <div class="drop-zone-text"><strong>Click or drag</strong> GTF file here<br/><span style="font-size:0.68rem;opacity:0.6">or use built-in GENCODE v44</span></div>
+        <div class="file-tag-wrap" id="gtf-files"></div>
+      </div>
+    </div>
+
+    <!-- Optional: multi-organ upload -->
+    <div class="upload-card sage-glow">
+      <div class="upload-icon sage">🫀</div>
+      <h3>Additional Organs</h3>
+      <p>Upload count matrices from other organs (liver, adipose, muscle, kidney) for cross-organ lncRNA network comparison.</p>
+      <div class="drop-zone" id="dz-organs" ondragover="dzDrag(event,'dz-organs')" ondragleave="dzLeave('dz-organs')" ondrop="dzDrop(event,'dz-organs','organ-files')">
+        <input type="file" accept=".csv,.tsv,.txt,.gz" multiple onchange="handleFiles(event,'organ-files')"/>
+        <span class="drop-zone-icon">🫁</span>
+        <div class="drop-zone-text"><strong>Click or drag</strong> additional matrices<br/><span style="font-size:0.68rem;opacity:0.6">label each file by organ name</span></div>
+        <div class="file-tag-wrap" id="organ-files"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ANALYSIS SELECTION ── -->
+<section id="analysis">
+  <div class="section-eyebrow">Step 02 — Analysis Modules</div>
+  <h2 class="section-title">Select your <em>analyses</em></h2>
+  <p class="section-lead">
+    Choose one or more modules. Each runs as a separate pipeline stage with its own R/Python script pulled from the ARCANA GitHub repository.
+  </p>
+
+  <div class="analysis-grid">
+    <div class="analysis-pill selected" onclick="togglePill(this)">
+      <div class="pill-check">✓</div>
+      <div class="pill-text">
+        <h4>lncRNA Identification</h4>
+        <p>Filter by biotype, annotate against GENCODE, classify subtypes (lincRNA, antisense, processed pseudogene)</p>
+      </div>
+    </div>
+    <div class="analysis-pill selected sage-sel" onclick="togglePill(this)">
+      <div class="pill-check">✓</div>
+      <div class="pill-text">
+        <h4>WGCNA Network</h4>
+        <p>Auto soft-threshold selection, signed hybrid network, module eigengene computation, hub gene identification</p>
+      </div>
+    </div>
+    <div class="analysis-pill selected" onclick="togglePill(this)">
+      <div class="pill-check">✓</div>
+      <div class="pill-text">
+        <h4>Differential Expression</h4>
+        <p>DESeq2 with apeglm shrinkage. All comparisons from your project config run automatically.</p>
+      </div>
+    </div>
+    <div class="analysis-pill" onclick="togglePill(this)">
+      <div class="pill-check"></div>
+      <div class="pill-text">
+        <h4>Hub Gene ML</h4>
+        <p>XGBoost + SHAP feature importance ranking of hub lncRNAs by trait association.</p>
+      </div>
+    </div>
+    <div class="analysis-pill" onclick="togglePill(this)">
+      <div class="pill-check"></div>
+      <div class="pill-text">
+        <h4>Cross-organ Comparison</h4>
+        <p>Preserved modules across tissues (WGCNA modulePreservation), Jaccard overlap, shared hub lncRNAs</p>
+      </div>
+    </div>
+    <div class="analysis-pill" onclick="togglePill(this)">
+      <div class="pill-check"></div>
+      <div class="pill-text">
+        <h4>Functional Enrichment</h4>
+        <p>GO, KEGG, and Reactome enrichment for module gene sets. lncRNA–TF regulatory network via ENCODE</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WGCNA parameters -->
+  <div class="upload-card full-width" style="margin-top:0">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem">
+      <div class="upload-icon sage" style="margin:0">⚙️</div>
+      <div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--cream)">WGCNA Parameters</h3>
+        <p style="font-size:0.75rem;color:var(--muted)">Leave on Auto for optimal soft-threshold selection</p>
+      </div>
+    </div>
+    <div class="config-grid" style="margin-bottom:0">
+      <div class="config-field">
+        <label class="config-label">Network Type</label>
+        <select class="config-input">
+          <option>signed hybrid (recommended)</option>
+          <option>signed</option>
+          <option>unsigned</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label class="config-label">Soft Threshold (β)</label>
+        <select class="config-input">
+          <option>Auto (scale-free fit ≥ 0.85)</option>
+          <option>6</option>
+          <option>8</option>
+          <option>10</option>
+          <option>12</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label class="config-label">Min Module Size</label>
+        <input class="config-input" type="number" value="30" placeholder="30"/>
+      </div>
+      <div class="config-field">
+        <label class="config-label">Merge Cut Height</label>
+        <input class="config-input" type="number" value="0.25" step="0.05" placeholder="0.25"/>
+      </div>
+      <div class="config-field">
+        <label class="config-label">Correlation Method</label>
+        <select class="config-input">
+          <option>bicor (robust)</option>
+          <option>pearson</option>
+          <option>spearman</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label class="config-label">DESeq2 Design Formula</label>
+        <input class="config-input" type="text" value="~ condition" placeholder="~ condition"/>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PLOT SELECTION ── -->
+<section id="plots">
+  <div class="section-eyebrow">Step 03 — Visualisations</div>
+  <h2 class="section-title">Choose your <em>plots</em></h2>
+  <p class="section-lead">
+    Select the figures to generate. All plots are saved as high-resolution PDF + PNG to your output directory.
+  </p>
+
+  <div class="plot-grid">
+    <div class="plot-card selected" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-heatmap">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <defs>
+            <linearGradient id="hg1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#7aab8a" stop-opacity="0.8"/><stop offset="50%" stop-color="#0f1117" stop-opacity="0.3"/><stop offset="100%" stop-color="#c97d7d" stop-opacity="0.8"/></linearGradient>
+          </defs>
+          <g opacity="0.8">
+            <rect x="4" y="4" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="20" y="4" width="14" height="10" fill="#c9a96e" opacity="0.7" rx="1"/>
+            <rect x="36" y="4" width="14" height="10" fill="#7aab8a" opacity="0.3" rx="1"/>
+            <rect x="52" y="4" width="14" height="10" fill="#7aab8a" opacity="0.8" rx="1"/>
+            <rect x="68" y="4" width="14" height="10" fill="#c97d7d" opacity="0.4" rx="1"/>
+            <rect x="84" y="4" width="14" height="10" fill="#c9a96e" opacity="0.6" rx="1"/>
+            <rect x="100" y="4" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+
+            <rect x="4" y="16" width="14" height="10" fill="#7aab8a" opacity="0.5" rx="1"/>
+            <rect x="20" y="16" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="36" y="16" width="14" height="10" fill="#c97d7d" opacity="0.6" rx="1"/>
+            <rect x="52" y="16" width="14" height="10" fill="#c9a96e" opacity="0.8" rx="1"/>
+            <rect x="68" y="16" width="14" height="10" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="84" y="16" width="14" height="10" fill="#c97d7d" opacity="0.3" rx="1"/>
+            <rect x="100" y="16" width="14" height="10" fill="#7aab8a" opacity="0.7" rx="1"/>
+
+            <rect x="4" y="28" width="14" height="10" fill="#c9a96e" opacity="0.8" rx="1"/>
+            <rect x="20" y="28" width="14" height="10" fill="#7aab8a" opacity="0.4" rx="1"/>
+            <rect x="36" y="28" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="52" y="28" width="14" height="10" fill="#7aab8a" opacity="0.6" rx="1"/>
+            <rect x="68" y="28" width="14" height="10" fill="#c9a96e" opacity="0.5" rx="1"/>
+            <rect x="84" y="28" width="14" height="10" fill="#c97d7d" opacity="0.7" rx="1"/>
+            <rect x="100" y="28" width="14" height="10" fill="#7aab8a" opacity="0.3" rx="1"/>
+
+            <rect x="4" y="40" width="14" height="10" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="20" y="40" width="14" height="10" fill="#c97d7d" opacity="0.3" rx="1"/>
+            <rect x="36" y="40" width="14" height="10" fill="#c9a96e" opacity="0.7" rx="1"/>
+            <rect x="52" y="40" width="14" height="10" fill="#c97d7d" opacity="0.8" rx="1"/>
+            <rect x="68" y="40" width="14" height="10" fill="#7aab8a" opacity="0.4" rx="1"/>
+            <rect x="84" y="40" width="14" height="10" fill="#c9a96e" opacity="0.9" rx="1"/>
+            <rect x="100" y="40" width="14" height="10" fill="#c97d7d" opacity="0.6" rx="1"/>
+
+            <rect x="4" y="52" width="14" height="10" fill="#c97d7d" opacity="0.5" rx="1"/>
+            <rect x="20" y="52" width="14" height="10" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="36" y="52" width="14" height="10" fill="#c97d7d" opacity="0.4" rx="1"/>
+            <rect x="52" y="52" width="14" height="10" fill="#c9a96e" opacity="0.6" rx="1"/>
+            <rect x="68" y="52" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="84" y="52" width="14" height="10" fill="#7aab8a" opacity="0.5" rx="1"/>
+            <rect x="100" y="52" width="14" height="10" fill="#c9a96e" opacity="0.3" rx="1"/>
+
+            <rect x="4" y="64" width="14" height="10" fill="#c9a96e" opacity="0.3" rx="1"/>
+            <rect x="20" y="64" width="14" height="10" fill="#c97d7d" opacity="0.7" rx="1"/>
+            <rect x="36" y="64" width="14" height="10" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="52" y="64" width="14" height="10" fill="#c97d7d" opacity="0.4" rx="1"/>
+            <rect x="68" y="64" width="14" height="10" fill="#c9a96e" opacity="0.7" rx="1"/>
+            <rect x="84" y="64" width="14" height="10" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="100" y="64" width="14" height="10" fill="#7aab8a" opacity="0.6" rx="1"/>
+
+            <rect x="4" y="76" width="14" height="10" fill="#7aab8a" opacity="0.7" rx="1"/>
+            <rect x="20" y="76" width="14" height="10" fill="#c9a96e" opacity="0.5" rx="1"/>
+            <rect x="36" y="76" width="14" height="10" fill="#c97d7d" opacity="0.3" rx="1"/>
+            <rect x="52" y="76" width="14" height="10" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="68" y="76" width="14" height="10" fill="#c97d7d" opacity="0.6" rx="1"/>
+            <rect x="84" y="76" width="14" height="10" fill="#c9a96e" opacity="0.4" rx="1"/>
+            <rect x="100" y="76" width="14" height="10" fill="#c97d7d" opacity="0.8" rx="1"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Expression Heatmap</div>
+      <div class="plot-tag">pheatmap · ggplot2</div>
+    </div>
+
+    <div class="plot-card selected" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-network">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.85">
+            <!-- edges -->
+            <line x1="60" y1="45" x2="30" y2="22" stroke="#7aab8a" stroke-width="1" opacity="0.5"/>
+            <line x1="60" y1="45" x2="90" y2="22" stroke="#7aab8a" stroke-width="1.5" opacity="0.6"/>
+            <line x1="60" y1="45" x2="95" y2="55" stroke="#c9a96e" stroke-width="1" opacity="0.4"/>
+            <line x1="60" y1="45" x2="22" y2="58" stroke="#c97d7d" stroke-width="2" opacity="0.6"/>
+            <line x1="60" y1="45" x2="50" y2="76" stroke="#7aab8a" stroke-width="1" opacity="0.4"/>
+            <line x1="60" y1="45" x2="80" y2="72" stroke="#c9a96e" stroke-width="1" opacity="0.5"/>
+            <line x1="30" y1="22" x2="15" y2="36" stroke="#7aab8a" stroke-width="0.8" opacity="0.3"/>
+            <line x1="90" y1="22" x2="105" y2="35" stroke="#c9a96e" stroke-width="0.8" opacity="0.3"/>
+            <line x1="22" y1="58" x2="10" y2="72" stroke="#c97d7d" stroke-width="0.8" opacity="0.3"/>
+            <line x1="30" y1="22" x2="50" y2="14" stroke="#7aab8a" stroke-width="0.8" opacity="0.4"/>
+            <!-- nodes -->
+            <circle cx="60" cy="45" r="7" fill="#c97d7d" opacity="0.9"/>
+            <circle cx="60" cy="45" r="11" fill="none" stroke="#c97d7d" stroke-width="0.8" opacity="0.3"/>
+            <circle cx="30" cy="22" r="4" fill="#7aab8a" opacity="0.85"/>
+            <circle cx="90" cy="22" r="5" fill="#7aab8a" opacity="0.8"/>
+            <circle cx="95" cy="55" r="3" fill="#c9a96e" opacity="0.75"/>
+            <circle cx="22" cy="58" r="5.5" fill="#c97d7d" opacity="0.7"/>
+            <circle cx="50" cy="76" r="3" fill="#7aab8a" opacity="0.7"/>
+            <circle cx="80" cy="72" r="3.5" fill="#c9a96e" opacity="0.75"/>
+            <circle cx="15" cy="36" r="2.5" fill="#7aab8a" opacity="0.6"/>
+            <circle cx="105" cy="35" r="2.5" fill="#c9a96e" opacity="0.6"/>
+            <circle cx="10" cy="72" r="2" fill="#c97d7d" opacity="0.55"/>
+            <circle cx="50" cy="14" r="2.5" fill="#7aab8a" opacity="0.6"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Co-expression Network</div>
+      <div class="plot-tag">igraph · visNetwork</div>
+    </div>
+
+    <div class="plot-card selected" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-volcano">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.85">
+            <!-- scatter points -->
+            <circle cx="60" cy="5" r="3" fill="#c97d7d" opacity="0.9"/>
+            <circle cx="55" cy="9" r="2.5" fill="#c97d7d" opacity="0.85"/>
+            <circle cx="65" cy="7" r="2" fill="#c97d7d" opacity="0.8"/>
+            <circle cx="15" cy="12" r="2.5" fill="#7aab8a" opacity="0.9"/>
+            <circle cx="20" cy="18" r="2" fill="#7aab8a" opacity="0.8"/>
+            <circle cx="105" cy="10" r="2.5" fill="#c97d7d" opacity="0.85"/>
+            <circle cx="100" cy="16" r="2" fill="#c97d7d" opacity="0.75"/>
+            <!-- middle scatter -->
+            <circle cx="30" cy="40" r="1.5" fill="#8892aa" opacity="0.5"/>
+            <circle cx="45" cy="38" r="1.5" fill="#8892aa" opacity="0.5"/>
+            <circle cx="60" cy="42" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="75" cy="36" r="1.5" fill="#8892aa" opacity="0.5"/>
+            <circle cx="90" cy="40" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="38" cy="55" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="55" cy="52" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="70" cy="58" r="1.5" fill="#8892aa" opacity="0.5"/>
+            <circle cx="85" cy="50" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="25" cy="62" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <circle cx="95" cy="62" r="1.5" fill="#8892aa" opacity="0.4"/>
+            <!-- threshold lines -->
+            <line x1="5" y1="25" x2="115" y2="25" stroke="#c9a96e" stroke-width="0.8" stroke-dasharray="4,3" opacity="0.4"/>
+            <line x1="35" y1="5" x2="35" y2="85" stroke="#c9a96e" stroke-width="0.8" stroke-dasharray="4,3" opacity="0.4"/>
+            <line x1="85" y1="5" x2="85" y2="85" stroke="#c9a96e" stroke-width="0.8" stroke-dasharray="4,3" opacity="0.4"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Volcano Plot</div>
+      <div class="plot-tag">EnhancedVolcano</div>
+    </div>
+
+    <div class="plot-card" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-dendrogram">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.8" stroke-linecap="round">
+            <path d="M60,8 L60,28" stroke="#c9a96e" stroke-width="1.2" fill="none"/>
+            <path d="M60,28 L30,28 M60,28 L90,28" stroke="#c9a96e" stroke-width="1.2" fill="none"/>
+            <path d="M30,28 L30,44 M90,28 L90,44" stroke="#c9a96e" stroke-width="1.2" fill="none"/>
+            <path d="M30,44 L18,44 M30,44 L42,44" stroke="#7aab8a" stroke-width="1" fill="none"/>
+            <path d="M90,44 L78,44 M90,44 L102,44" stroke="#c97d7d" stroke-width="1" fill="none"/>
+            <path d="M18,44 L18,58 M42,44 L42,58" stroke="#7aab8a" stroke-width="0.8" fill="none"/>
+            <path d="M78,44 L78,58 M102,44 L102,58" stroke="#c97d7d" stroke-width="0.8" fill="none"/>
+            <path d="M18,58 L12,58 M18,58 L24,58" stroke="#7aab8a" stroke-width="0.6" fill="none"/>
+            <path d="M42,58 L36,58 M42,58 L48,58" stroke="#7aab8a" stroke-width="0.6" fill="none"/>
+            <!-- color bands at bottom -->
+            <rect x="8" y="66" width="8" height="6" fill="#7aab8a" opacity="0.8" rx="0.5"/>
+            <rect x="20" y="66" width="8" height="6" fill="#7aab8a" opacity="0.6" rx="0.5"/>
+            <rect x="32" y="66" width="8" height="6" fill="#c9a96e" opacity="0.7" rx="0.5"/>
+            <rect x="44" y="66" width="8" height="6" fill="#c9a96e" opacity="0.5" rx="0.5"/>
+            <rect x="56" y="66" width="8" height="6" fill="#c97d7d" opacity="0.5" rx="0.5"/>
+            <rect x="68" y="66" width="8" height="6" fill="#c97d7d" opacity="0.8" rx="0.5"/>
+            <rect x="80" y="66" width="8" height="6" fill="#c97d7d" opacity="0.6" rx="0.5"/>
+            <rect x="92" y="66" width="8" height="6" fill="#7aab8a" opacity="0.7" rx="0.5"/>
+            <rect x="104" y="66" width="8" height="6" fill="#c9a96e" opacity="0.6" rx="0.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Module Dendrogram</div>
+      <div class="plot-tag">WGCNA · base R</div>
+    </div>
+
+    <div class="plot-card" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-eigengene">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.8">
+            <polyline points="5,70 15,55 25,60 35,40 45,45 55,28 65,32 75,18 85,24 95,12 105,16 115,8" fill="none" stroke="#7aab8a" stroke-width="1.8"/>
+            <polyline points="5,75 15,72 25,68 35,62 45,58 55,65 65,60 75,55 85,50 95,58 105,48 115,45" fill="none" stroke="#c97d7d" stroke-width="1.4"/>
+            <polyline points="5,80 15,78 25,75 35,72 45,68 55,70 65,66 75,72 85,68 95,64 105,68 115,60" fill="none" stroke="#c9a96e" stroke-width="1.2" stroke-dasharray="4,2"/>
+            <!-- axes -->
+            <line x1="5" y1="5" x2="5" y2="85" stroke="#8892aa" stroke-width="0.8" opacity="0.5"/>
+            <line x1="5" y1="85" x2="115" y2="85" stroke="#8892aa" stroke-width="0.8" opacity="0.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Eigengene Profiles</div>
+      <div class="plot-tag">ggplot2 · WGCNA</div>
+    </div>
+
+    <div class="plot-card" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-boxplot">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.8">
+            <!-- box 1 -->
+            <rect x="12" y="25" width="18" height="35" fill="#c97d7d" opacity="0.25" rx="1"/>
+            <rect x="12" y="35" width="18" height="16" fill="#c97d7d" opacity="0.6" rx="1"/>
+            <line x1="21" y1="25" x2="21" y2="15" stroke="#c97d7d" stroke-width="1.2"/>
+            <line x1="21" y1="60" x2="21" y2="72" stroke="#c97d7d" stroke-width="1.2"/>
+            <line x1="17" y1="15" x2="25" y2="15" stroke="#c97d7d" stroke-width="1"/>
+            <line x1="17" y1="72" x2="25" y2="72" stroke="#c97d7d" stroke-width="1"/>
+            <line x1="12" y1="43" x2="30" y2="43" stroke="#c97d7d" stroke-width="1.8"/>
+            <!-- box 2 -->
+            <rect x="42" y="30" width="18" height="30" fill="#7aab8a" opacity="0.25" rx="1"/>
+            <rect x="42" y="38" width="18" height="14" fill="#7aab8a" opacity="0.6" rx="1"/>
+            <line x1="51" y1="30" x2="51" y2="20" stroke="#7aab8a" stroke-width="1.2"/>
+            <line x1="51" y1="60" x2="51" y2="70" stroke="#7aab8a" stroke-width="1.2"/>
+            <line x1="47" y1="20" x2="55" y2="20" stroke="#7aab8a" stroke-width="1"/>
+            <line x1="47" y1="70" x2="55" y2="70" stroke="#7aab8a" stroke-width="1"/>
+            <line x1="42" y1="44" x2="60" y2="44" stroke="#7aab8a" stroke-width="1.8"/>
+            <!-- box 3 -->
+            <rect x="72" y="20" width="18" height="40" fill="#c9a96e" opacity="0.25" rx="1"/>
+            <rect x="72" y="30" width="18" height="20" fill="#c9a96e" opacity="0.6" rx="1"/>
+            <line x1="81" y1="20" x2="81" y2="10" stroke="#c9a96e" stroke-width="1.2"/>
+            <line x1="81" y1="60" x2="81" y2="75" stroke="#c9a96e" stroke-width="1.2"/>
+            <line x1="77" y1="10" x2="85" y2="10" stroke="#c9a96e" stroke-width="1"/>
+            <line x1="77" y1="75" x2="85" y2="75" stroke="#c9a96e" stroke-width="1"/>
+            <line x1="72" y1="40" x2="90" y2="40" stroke="#c9a96e" stroke-width="1.8"/>
+            <!-- outliers -->
+            <circle cx="21" cy="80" r="1.5" fill="none" stroke="#c97d7d" stroke-width="1"/>
+            <circle cx="81" cy="83" r="1.5" fill="none" stroke="#c9a96e" stroke-width="1"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Module Boxplots</div>
+      <div class="plot-tag">ggplot2 · ggpubr</div>
+    </div>
+
+    <div class="plot-card" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-upset">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.8">
+            <!-- bar chart at top -->
+            <rect x="10" y="12" width="12" height="28" fill="#c97d7d" opacity="0.75" rx="1"/>
+            <rect x="28" y="20" width="12" height="20" fill="#7aab8a" opacity="0.7" rx="1"/>
+            <rect x="46" y="16" width="12" height="24" fill="#c9a96e" opacity="0.7" rx="1"/>
+            <rect x="64" y="25" width="12" height="15" fill="#c97d7d" opacity="0.6" rx="1"/>
+            <rect x="82" y="30" width="12" height="10" fill="#7aab8a" opacity="0.6" rx="1"/>
+            <rect x="100" y="34" width="12" height="6" fill="#c9a96e" opacity="0.5" rx="1"/>
+            <!-- separator -->
+            <line x1="5" y1="50" x2="115" y2="50" stroke="#8892aa" stroke-width="0.8" opacity="0.4"/>
+            <!-- dot matrix -->
+            <circle cx="16" cy="60" r="3.5" fill="#c97d7d" opacity="0.9"/>
+            <circle cx="34" cy="60" r="3.5" fill="#8892aa" opacity="0.25"/>
+            <circle cx="52" cy="60" r="3.5" fill="#c97d7d" opacity="0.9"/>
+            <line x1="16" y1="60" x2="52" y2="60" stroke="#c97d7d" stroke-width="2" opacity="0.5"/>
+
+            <circle cx="16" cy="74" r="3.5" fill="#8892aa" opacity="0.25"/>
+            <circle cx="34" cy="74" r="3.5" fill="#7aab8a" opacity="0.9"/>
+            <circle cx="52" cy="74" r="3.5" fill="#7aab8a" opacity="0.9"/>
+            <circle cx="70" cy="74" r="3.5" fill="#8892aa" opacity="0.25"/>
+            <line x1="34" y1="74" x2="52" y2="74" stroke="#7aab8a" stroke-width="2" opacity="0.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">UpSet Plot</div>
+      <div class="plot-tag">UpSetR · ComplexHeatmap</div>
+    </div>
+
+    <div class="plot-card" onclick="togglePlot(this)">
+      <div class="selected-badge">✓</div>
+      <div class="plot-preview mini-sankey">
+        <svg width="100%" height="100%" viewBox="0 0 120 90">
+          <g opacity="0.8">
+            <!-- Sankey flows -->
+            <path d="M5,10 C40,10 80,15 115,15 L115,25 C80,25 40,20 5,20 Z" fill="#c97d7d" opacity="0.4"/>
+            <path d="M5,24 C40,24 80,28 115,30 L115,38 C80,36 40,32 5,32 Z" fill="#7aab8a" opacity="0.4"/>
+            <path d="M5,36 C40,36 80,45 115,55 L115,62 C80,52 40,44 5,44 Z" fill="#c9a96e" opacity="0.4"/>
+            <path d="M5,48 C40,48 80,62 115,68 L115,75 C80,69 40,55 5,55 Z" fill="#c97d7d" opacity="0.3"/>
+            <path d="M5,59 C40,59 80,72 115,78 L115,85 C80,79 40,66 5,66 Z" fill="#7aab8a" opacity="0.3"/>
+            <!-- left nodes -->
+            <rect x="3" y="8" width="5" height="16" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="3" y="26" width="5" height="12" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="3" y="40" width="5" height="14" fill="#c9a96e" opacity="0.9" rx="1"/>
+            <rect x="3" y="56" width="5" height="12" fill="#c97d7d" opacity="0.7" rx="1"/>
+            <!-- right nodes -->
+            <rect x="112" y="12" width="5" height="16" fill="#c97d7d" opacity="0.9" rx="1"/>
+            <rect x="112" y="28" width="5" height="14" fill="#c9a96e" opacity="0.9" rx="1"/>
+            <rect x="112" y="44" width="5" height="18" fill="#7aab8a" opacity="0.9" rx="1"/>
+            <rect x="112" y="64" width="5" height="18" fill="#c97d7d" opacity="0.7" rx="1"/>
+          </g>
+        </svg>
+      </div>
+      <div class="plot-name">Cross-organ Sankey</div>
+      <div class="plot-tag">networkD3 · plotly</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── OUTPUT CONFIG ── -->
+<section>
+  <div class="section-eyebrow">Step 04 — Output Settings</div>
+  <h2 class="section-title">Configure <em>outputs</em></h2>
+  <p class="section-lead">
+    Set where results are saved, how plots are formatted, and your analysis label for the history log.
+  </p>
+
+  <div class="config-grid">
+    <div class="config-field">
+      <label class="config-label">Output Directory</label>
+      <input class="config-input" type="text" value="~/ARCANA/results/" placeholder="~/ARCANA/results/"/>
+    </div>
+    <div class="config-field">
+      <label class="config-label">Run Label</label>
+      <input class="config-input" type="text" placeholder="e.g. MyProject_v1"/>
+    </div>
+    <div class="config-field">
+      <label class="config-label">Organism</label>
+      <select class="config-input">
+        <option>Homo sapiens (hg38)</option>
+        <option>Homo sapiens (hg19)</option>
+        <option>Mus musculus (mm10)</option>
+      </select>
+    </div>
+    <div class="config-field">
+      <label class="config-label">Plot Format</label>
+      <select class="config-input">
+        <option>PDF + PNG (300 dpi)</option>
+        <option>PDF only</option>
+        <option>PNG only (600 dpi)</option>
+        <option>SVG + PNG</option>
+      </select>
+    </div>
+    <div class="config-field">
+      <label class="config-label">Result Format</label>
+      <select class="config-input">
+        <option>CSV + RData + HTML report</option>
+        <option>CSV only</option>
+        <option>Excel + CSV</option>
+      </select>
+    </div>
+    <div class="config-field">
+      <label class="config-label">GitHub Pipeline</label>
+      <select class="config-input">
+        <option>ARCANA/pipeline — main (latest)</option>
+        <option>ARCANA/pipeline — v2.0 (stable)</option>
+        <option>ARCANA/pipeline — dev</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="run-section">
+    <div class="run-summary">
+      <div class="run-item">
+        <div class="run-dot rose"></div>
+        <span><strong id="file-count">0</strong> files loaded</span>
+      </div>
+      <div class="run-item">
+        <div class="run-dot sage"></div>
+        <span><strong id="analysis-count">3</strong> analyses selected</span>
+      </div>
+      <div class="run-item">
+        <div class="run-dot gold"></div>
+        <span><strong id="plot-count">3</strong> plots queued</span>
+      </div>
+    </div>
+    <button class="btn-run" onclick="startRun()">
+      <span>⚗️</span>
+      Run ARCANA Pipeline
+    </button>
+  </div>
+</section>
+
+<!-- ── PIPELINE STATUS ── -->
+<section id="pipeline">
+  <div class="section-eyebrow">Step 05 — Pipeline Log</div>
+  <h2 class="section-title">Analysis <em>progress</em></h2>
+  <p class="section-lead">Live pipeline status. Each step pulls from the GitHub repository and logs output in real time.</p>
+
+  <div class="pipeline-card">
+    <div class="pipeline-steps">
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">①</div>
+        <div class="step-info">
+          <h4>Environment Check</h4>
+          <p>R ≥ 4.3, Python ≥ 3.10, WGCNA, DESeq2, BiocManager</p>
+        </div>
+        <div class="step-badge badge-waiting">waiting</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">②</div>
+        <div class="step-info">
+          <h4>Pull Pipeline Scripts</h4>
+          <p>git pull ARCANA/pipeline@main → /tmp/arcana/</p>
+        </div>
+        <div class="step-badge badge-waiting">waiting</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">③</div>
+        <div class="step-info">
+          <h4>lncRNA Filtering</h4>
+          <p>01_lncrna_filter.R — biotype annotation, QC, low-expression removal</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">④</div>
+        <div class="step-info">
+          <h4>Normalisation & QC</h4>
+          <p>02_normalise.R — variance stabilisation, outlier detection, PCA</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">⑤</div>
+        <div class="step-info">
+          <h4>WGCNA Network Construction</h4>
+          <p>03_wgcna.R — soft threshold, adjacency, TOM, module detection</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">⑥</div>
+        <div class="step-info">
+          <h4>Hub Gene Identification</h4>
+          <p>05C_hub_gene_prioritisation.R — kME scoring, intramodular connectivity, trait correlation</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">⑦</div>
+        <div class="step-info">
+          <h4>Differential Expression</h4>
+          <p>03_differential_expression.R — DESeq2 Wald test, apeglm LFC shrinkage, all configured comparisons</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">⑧</div>
+        <div class="step-info">
+          <h4>Plot Generation</h4>
+          <p>06_plots.R — all selected visualisations, saved to output directory</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-line"></div>
+        <div class="step-icon waiting">⑨</div>
+        <div class="step-info">
+          <h4>ML Analysis</h4>
+          <p>07_ml.py — XGBoost hub lncRNA ranking, SHAP feature importance</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-icon waiting">⑩</div>
+        <div class="step-info">
+          <h4>Package Results</h4>
+          <p>Compress outputs, generate HTML report, save to run history</p>
+        </div>
+        <div class="step-badge badge-queued">queued</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── RESULTS PREVIEW ── -->
+<section>
+  <div class="section-eyebrow">Results Preview</div>
+  <h2 class="section-title">Hub <em>lncRNAs</em> detected</h2>
+  <p class="section-lead">Run a pipeline to populate this section. Previous runs can be loaded from History below.</p>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <h3 id="network-card-title">Co-expression Network</h3>
+      <p class="sub" id="network-card-sub">WGCNA · hub genes ranked by kME × intramodular connectivity</p>
+      <div class="placeholder-plot">
+        <span style="font-size:1.8rem">🕸️</span>
+        <span>awaiting analysis run</span>
+      </div>
+    </div>
+    <div class="result-card">
+      <h3>Top Hub lncRNAs</h3>
+      <p class="sub">Ranked by intramodular connectivity × |kME|</p>
+      <div class="hub-gene-list">
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">MALAT1</span>
+          <span class="gene-type type-lnc">lncRNA</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">NEAT1</span>
+          <span class="gene-type type-lnc">lncRNA</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">LINC01116</span>
+          <span class="gene-type type-lnc">lncRNA</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">HIF1A</span>
+          <span class="gene-type type-pc">protein-coding</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">MIAT</span>
+          <span class="gene-type type-lnc">lncRNA</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+        <div class="hub-gene-row" style="opacity:0.4">
+          <span class="gene-name">H19</span>
+          <span class="gene-type type-lnc">lncRNA</span>
+          <span class="gene-kme">kME: —</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HISTORY ── -->
+<section id="history">
+  <div class="section-eyebrow">Previous Runs</div>
+  <h2 class="section-title">Analysis <em>history</em></h2>
+  <p class="section-lead">ARCANA remembers every run. Reload parameters, re-download results, or compare modules across analyses.</p>
+
+  <div class="history-grid" id="history-grid">
+    <!-- Populated dynamically from /api/runs — see initHistory() -->
+    <div class="history-empty" style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--muted);font-size:0.95rem;">
+      No previous runs yet. Completed analyses will appear here automatically.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     INTERACTIVE NETWORK VISUALISER
+═══════════════════════════════════════════════ -->
+<section id="network-viz">
+  <div class="section-eyebrow">Network Explorer</div>
+  <h2 class="section-title">Interactive <em>co-expression</em> network</h2>
+  <p class="section-lead">Explore module topology live. Click nodes to inspect gene info. Drag to rearrange. Filter by module colour or gene biotype.</p>
+
+  <div class="viz-shell">
+    <!-- toolbar -->
+    <div class="viz-toolbar">
+      <div class="viz-toolbar-left">
+        <button class="viz-btn active" onclick="setLayout('force')">Force</button>
+        <button class="viz-btn" onclick="setLayout('radial')">Radial</button>
+        <button class="viz-btn" onclick="setLayout('cluster')">Cluster</button>
+        <div class="viz-sep"></div>
+        <button class="viz-btn" onclick="filterBiotype('all')" id="fb-all" style="border-color:var(--gold);color:var(--gold)">All</button>
+        <button class="viz-btn" onclick="filterBiotype('lnc')" id="fb-lnc">lncRNA</button>
+        <button class="viz-btn" onclick="filterBiotype('pc')"  id="fb-pc">Protein-coding</button>
+      </div>
+      <div class="viz-toolbar-right">
+        <span class="viz-stat"><strong id="vn-count">68</strong> nodes</span>
+        <span class="viz-stat"><strong id="ve-count">142</strong> edges</span>
+        <span class="viz-stat" id="vn-selected" style="color:var(--rose);display:none">1 selected</span>
+        <button class="viz-btn" onclick="resetViz()">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- canvas + info panel -->
+    <div class="viz-body">
+      <canvas id="net-canvas"></canvas>
+
+      <!-- gene info panel -->
+      <div class="gene-panel" id="gene-panel">
+        <div class="gene-panel-header">
+          <span class="gene-panel-name" id="gp-name">MALAT1</span>
+          <button onclick="closeGenePanel()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+        </div>
+        <div class="gene-panel-row"><span>Biotype</span><span class="gp-val lnc-val" id="gp-biotype">lncRNA</span></div>
+        <div class="gene-panel-row"><span>Module</span><span class="gp-val" id="gp-module">turquoise</span></div>
+        <div class="gene-panel-row"><span>kME</span><span class="gp-val gold-val" id="gp-kme">0.94</span></div>
+        <div class="gene-panel-row"><span>Connectivity</span><span class="gp-val" id="gp-conn">1,842</span></div>
+        <div class="gene-panel-row"><span id="gp-trait-label">Trait corr.</span><span class="gp-val rose-val" id="gp-trait">—</span></div>
+        <div class="gene-panel-row"><span>Chr</span><span class="gp-val mono-val" id="gp-chr">chr11:65,497,688</span></div>
+        <div class="gene-panel-divider"></div>
+        <div class="gene-panel-row"><span>Neighbours</span><span class="gp-val" id="gp-neigh">14</span></div>
+        <button class="gene-panel-btn" onclick="highlightNeighbours()">Highlight neighbours</button>
+      </div>
+    </div>
+
+    <!-- module legend -->
+    <div class="viz-legend">
+      <span class="legend-label">Modules:</span>
+      <div class="legend-item" onclick="filterModule('turquoise')"><span class="legend-dot" style="background:#4db6ac"></span>turquoise</div>
+      <div class="legend-item" onclick="filterModule('blue')"><span class="legend-dot" style="background:#5c9bd4"></span>blue</div>
+      <div class="legend-item" onclick="filterModule('brown')"><span class="legend-dot" style="background:#b07040"></span>brown</div>
+      <div class="legend-item" onclick="filterModule('yellow')"><span class="legend-dot" style="background:#c9a96e"></span>yellow</div>
+      <div class="legend-item" onclick="filterModule('green')"><span class="legend-dot" style="background:#7aab8a"></span>green</div>
+      <div class="legend-item" onclick="filterModule('red')"><span class="legend-dot" style="background:#c97d7d"></span>red</div>
+      <div class="legend-item" onclick="filterModule(null)"><span class="legend-dot" style="background:var(--muted)"></span>all</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     MULTI-ORGAN COMPARISON
+═══════════════════════════════════════════════ -->
+<section id="compare">
+  <div class="section-eyebrow">Multi-organ Comparison</div>
+  <h2 class="section-title">Cross-tissue <em>lncRNA</em> landscape</h2>
+  <p class="section-lead">Compare hub lncRNA overlap and module preservation scores across organs. Click a cell to drill into shared genes.</p>
+
+  <div class="compare-grid">
+    <!-- Heatmap-style overlap matrix -->
+    <div class="compare-card wide-card">
+      <div class="compare-card-header">
+        <h3>Module Preservation Matrix</h3>
+        <p>Z-summary score — values > 10 indicate high preservation</p>
+      </div>
+      <div class="matrix-wrap">
+        <table class="overlap-matrix" id="overlap-matrix">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="organ-chip heart-chip">Heart</span></th>
+              <th><span class="organ-chip liver-chip">Liver</span></th>
+              <th><span class="organ-chip adipose-chip">Adipose</span></th>
+              <th><span class="organ-chip muscle-chip">Muscle</span></th>
+              <th><span class="organ-chip kidney-chip">Kidney</span></th>
+            </tr>
+          </thead>
+          <tbody id="matrix-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Shared hub lncRNAs -->
+    <div class="compare-card">
+      <div class="compare-card-header">
+        <h3>Shared Hub lncRNAs</h3>
+        <p>Present as hub (kME ≥ 0.8) in ≥ 2 organs</p>
+      </div>
+      <div class="shared-gene-list" id="shared-gene-list">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Organ summary cards -->
+  <div class="organ-summary-grid">
+    <div class="organ-card" onclick="selectOrgan(this,'Heart')">
+      <div class="organ-icon" style="background:rgba(201,125,125,0.12)">🫀</div>
+      <div class="organ-info">
+        <div class="organ-name">Heart</div>
+        <div class="organ-stats">38 lncRNA · 6 modules</div>
+        <div class="organ-bar-wrap"><div class="organ-bar" style="width:78%;background:var(--rose)"></div></div>
+      </div>
+      <div class="organ-kme">kME 0.91</div>
+    </div>
+    <div class="organ-card" onclick="selectOrgan(this,'Liver')">
+      <div class="organ-icon" style="background:rgba(122,171,138,0.12)">🫁</div>
+      <div class="organ-info">
+        <div class="organ-name">Liver</div>
+        <div class="organ-stats">52 lncRNA · 9 modules</div>
+        <div class="organ-bar-wrap"><div class="organ-bar" style="width:91%;background:var(--sage)"></div></div>
+      </div>
+      <div class="organ-kme">kME 0.94</div>
+    </div>
+    <div class="organ-card" onclick="selectOrgan(this,'Adipose')">
+      <div class="organ-icon" style="background:rgba(201,169,110,0.12)">🩺</div>
+      <div class="organ-info">
+        <div class="organ-name">Adipose</div>
+        <div class="organ-stats">29 lncRNA · 5 modules</div>
+        <div class="organ-bar-wrap"><div class="organ-bar" style="width:62%;background:var(--gold)"></div></div>
+      </div>
+      <div class="organ-kme">kME 0.87</div>
+    </div>
+    <div class="organ-card" onclick="selectOrgan(this,'Muscle')">
+      <div class="organ-icon" style="background:rgba(92,155,212,0.12)">💪</div>
+      <div class="organ-info">
+        <div class="organ-name">Skeletal Muscle</div>
+        <div class="organ-stats">— · awaiting data</div>
+        <div class="organ-bar-wrap"><div class="organ-bar" style="width:0%;background:#5c9bd4"></div></div>
+      </div>
+      <div class="organ-kme" style="color:var(--muted)">—</div>
+    </div>
+    <div class="organ-card" onclick="selectOrgan(this,'Kidney')">
+      <div class="organ-icon" style="background:rgba(180,130,200,0.12)">🔬</div>
+      <div class="organ-info">
+        <div class="organ-name">Kidney</div>
+        <div class="organ-stats">— · awaiting data</div>
+        <div class="organ-bar-wrap"><div class="organ-bar" style="width:0%;background:#b482c8"></div></div>
+      </div>
+      <div class="organ-kme" style="color:var(--muted)">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     RESULTS DASHBOARD — DE TABLE + ENRICHMENT
+═══════════════════════════════════════════════ -->
+<section id="results-dashboard">
+  <div class="section-eyebrow">Results Dashboard</div>
+  <h2 class="section-title">Differential expression <em>& enrichment</em></h2>
+  <p class="section-lead">Sortable DE results table, enrichment terms, and exportable gene lists from the last completed run.</p>
+
+  <div class="dash-grid">
+    <!-- DE table -->
+    <div class="dash-card dash-wide">
+      <div class="dash-header">
+        <div>
+          <h3>Differential Expression Results</h3>
+          <p class="dash-sub" id="de-subtitle">DESeq2 · padj &lt; 0.05 shown</p>
+        </div>
+        <div style="display:flex;gap:0.6rem;align-items:center">
+          <input class="config-input" style="width:180px;padding:0.45rem 0.7rem" type="text" placeholder="🔍 Search gene…" oninput="filterTable(this.value)" id="table-search"/>
+          <button class="viz-btn" onclick="exportTable()">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="de-table" id="de-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable(0)">Gene <span class="sort-icon">⇅</span></th>
+              <th onclick="sortTable(1)">Biotype <span class="sort-icon">⇅</span></th>
+              <th onclick="sortTable(2)">log₂FC <span class="sort-icon">⇅</span></th>
+              <th onclick="sortTable(3)">padj <span class="sort-icon">⇅</span></th>
+              <th onclick="sortTable(4)">Module <span class="sort-icon">⇅</span></th>
+              <th onclick="sortTable(5)">kME <span class="sort-icon">⇅</span></th>
+              <th>Hub</th>
+            </tr>
+          </thead>
+          <tbody id="de-tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="table-count">Showing 15 of 127 significant genes</span>
+        <div style="display:flex;gap:0.4rem">
+          <button class="viz-btn" id="prev-page" onclick="changePage(-1)">← Prev</button>
+          <button class="viz-btn" id="next-page" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enrichment -->
+    <div class="dash-card">
+      <div class="dash-header">
+        <div>
+          <h3>Top Enrichment Terms</h3>
+          <p class="dash-sub">GO Biological Process · turquoise module</p>
+        </div>
+        <select class="config-input" style="width:130px;padding:0.4rem 0.6rem;font-size:0.75rem" onchange="switchEnrich(this.value)">
+          <option>GO:BP</option>
+          <option>GO:MF</option>
+          <option>KEGG</option>
+          <option>Reactome</option>
+        </select>
+      </div>
+      <div class="enrich-list" id="enrich-list">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     DOWNLOAD MANAGER
+═══════════════════════════════════════════════ -->
+<section id="downloads">
+  <div class="section-eyebrow">Downloads</div>
+  <h2 class="section-title">Export your <em>results</em></h2>
+  <p class="section-lead">All outputs from completed runs. Download individual files or the full archive. Results are also saved locally to your configured output directory.</p>
+
+  <div class="dl-grid">
+    <div class="dl-group">
+      <div class="dl-group-title">📊 Tables</div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📄</div>
+        <div class="dl-info">
+          <div class="dl-name">lncrna_results.csv</div>
+          <div class="dl-meta">All lncRNA · annotated · kME scored · 2.1 MB</div>
+        </div>
+        <div class="dl-size">2.1 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📄</div>
+        <div class="dl-info">
+          <div class="dl-name">deseq2_full.csv</div>
+          <div class="dl-meta">All genes · DESeq2 results · LFC shrunken · 5.8 MB</div>
+        </div>
+        <div class="dl-size">5.8 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📄</div>
+        <div class="dl-info">
+          <div class="dl-name">hub_genes.csv</div>
+          <div class="dl-meta">Top hub lncRNAs · kME ≥ 0.8 · XGBoost ranked · 84 KB</div>
+        </div>
+        <div class="dl-size">84 KB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📊</div>
+        <div class="dl-info">
+          <div class="dl-name">enrichment_results.xlsx</div>
+          <div class="dl-meta">GO · KEGG · Reactome · all modules · 1.4 MB</div>
+        </div>
+        <div class="dl-size">1.4 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+    </div>
+
+    <div class="dl-group">
+      <div class="dl-group-title">🖼️ Plots</div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">🎨</div>
+        <div class="dl-info">
+          <div class="dl-name">heatmap_expression.pdf</div>
+          <div class="dl-meta">300 dpi · A4 · lncRNA hub genes · 3.2 MB</div>
+        </div>
+        <div class="dl-size">3.2 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">🎨</div>
+        <div class="dl-info">
+          <div class="dl-name">wgcna_dendrogram.pdf</div>
+          <div class="dl-meta">Module colours · soft threshold = 8 · 1.8 MB</div>
+        </div>
+        <div class="dl-size">1.8 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">🎨</div>
+        <div class="dl-info">
+          <div class="dl-name" id="dl-volcano-name">volcano_comparison.pdf</div>
+          <div class="dl-meta">EnhancedVolcano · labelled lncRNAs · 2.4 MB</div>
+        </div>
+        <div class="dl-size">2.4 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">🎨</div>
+        <div class="dl-info">
+          <div class="dl-name">all_plots.zip</div>
+          <div class="dl-meta">PDF + PNG (300 dpi) · all selected plots · 18.6 MB</div>
+        </div>
+        <div class="dl-size">18.6 MB</div>
+        <button class="dl-btn" style="background:var(--rose);color:var(--midnight)">↓</button>
+      </div>
+    </div>
+
+    <div class="dl-group">
+      <div class="dl-group-title">🧬 R Objects</div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📦</div>
+        <div class="dl-info">
+          <div class="dl-name">wgcna_network.RData</div>
+          <div class="dl-meta">Full WGCNA object · reloadable · 42 MB</div>
+        </div>
+        <div class="dl-size">42 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item" onclick="dlItem(this)">
+        <div class="dl-icon">📦</div>
+        <div class="dl-info">
+          <div class="dl-name">dds_deseq2.RData</div>
+          <div class="dl-meta">DESeqDataSet · normalised counts included · 28 MB</div>
+        </div>
+        <div class="dl-size">28 MB</div>
+        <button class="dl-btn">↓</button>
+      </div>
+      <div class="dl-item dl-highlight" onclick="dlItem(this)">
+        <div class="dl-icon">📦</div>
+        <div class="dl-info">
+          <div class="dl-name">ARCANA_full_run.tar.gz</div>
+          <div class="dl-meta">Everything · tables + plots + R objects · HTML report · 96 MB</div>
+        </div>
+        <div class="dl-size">96 MB</div>
+        <button class="dl-btn dl-btn-gold">↓ Full</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SETTINGS PANEL (SIDEBAR MODAL)
+═══════════════════════════════════════════════ -->
+<div id="settings-overlay" onclick="closeSettings()"></div>
+<div id="settings-panel">
+  <div class="settings-header">
+    <span style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:600;color:var(--cream)">Settings</span>
+    <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem">✕</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Environment</div>
+    <div class="settings-row">
+      <span>R executable path</span>
+      <input class="config-input" style="width:200px" type="text" value="/usr/local/bin/Rscript" placeholder="/usr/local/bin/Rscript"/>
+    </div>
+    <div class="settings-row">
+      <span>Python path</span>
+      <input class="config-input" style="width:200px" type="text" value="/usr/bin/python3" placeholder="/usr/bin/python3"/>
+    </div>
+    <div class="settings-row">
+      <span>Parallel cores</span>
+      <input class="config-input" style="width:80px" type="number" value="4" min="1" max="64"/>
+    </div>
+    <div class="settings-row">
+      <span>RAM limit (GB)</span>
+      <input class="config-input" style="width:80px" type="number" value="16" min="4"/>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">GitHub Pipeline</div>
+    <div class="settings-row">
+      <span>Repository URL</span>
+      <input class="config-input" style="width:200px" type="text" value="github.com/ARCANA/pipeline"/>
+    </div>
+    <div class="settings-row">
+      <span>Auto-pull on run</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" checked id="auto-pull"/>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span>Branch</span>
+      <select class="config-input" style="width:140px">
+        <option>main</option>
+        <option>dev</option>
+        <option>v2.0-stable</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Memory & Storage</div>
+    <div class="settings-row">
+      <span>Default output dir</span>
+      <input class="config-input" style="width:200px" type="text" value="~/ARCANA/results/"/>
+    </div>
+    <div class="settings-row">
+      <span>Keep run history</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" checked/>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span>Cache GTF locally</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" checked/>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span>History entries</span>
+      <input class="config-input" style="width:80px" type="number" value="50"/>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Appearance</div>
+    <div class="settings-row">
+      <span>Animated background</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" checked id="toggle-canvas" onchange="document.getElementById('hero-canvas').style.display=this.checked?'block':'none'"/>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <span>Reduced motion</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="reduce-motion"/>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+  </div>
+
+  <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="closeSettings();showToast('Settings saved','All preferences updated.')">Save Settings</button>
+</div>
+
+<!-- settings trigger (gear icon in nav area) -->
+<button id="settings-trigger" onclick="openSettings()" title="Settings">⚙</button>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">ARCANA</div>
+  <ul class="footer-links">
+    <li><a href="#">GitHub</a></li>
+    <li><a href="#">Documentation</a></li>
+    <li><a href="#">Pipeline Status</a></li>
+    <li><a href="#">Bioconductor</a></li>
+  </ul>
+  <div class="footer-copy">v2.1.0 · runs locally · data stays yours</div>
+</footer>
+
+<!-- ── TOAST ── -->
+<div id="toast">
+  <div class="toast-title" id="toast-title">Pipeline started</div>
+  <div id="toast-body">Pulling scripts from GitHub…</div>
+</div>
+
+<script>
+/* ── ANIMATED NETWORK CANVAS ── */
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+
+let nodes = [], W, H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function randomColor() {
+  const colors = ['#c97d7d','#7aab8a','#c9a96e','#e8b4b4','#a8cdb5'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+for (let i = 0; i < 55; i++) {
+  nodes.push({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    vx: (Math.random() - 0.5) * 0.35,
+    vy: (Math.random() - 0.5) * 0.35,
+    r: Math.random() * 3.5 + 1.5,
+    color: randomColor(),
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+let frame = 0;
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  frame++;
+
+  // edges
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 160) {
+        const alpha = (1 - dist/160) * 0.18;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.strokeStyle = `rgba(201,169,110,${alpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // nodes
+  nodes.forEach((n, i) => {
+    const pulse = 0.5 + 0.5 * Math.sin(frame * 0.022 + n.phase);
+    const r = n.r * (0.85 + 0.3 * pulse);
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = n.color + '18';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color + 'cc';
+    ctx.fill();
+
+    n.x += n.vx;
+    n.y += n.vy;
+    if (n.x < 0 || n.x > W) n.vx *= -1;
+    if (n.y < 0 || n.y > H) n.vy *= -1;
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ── TOGGLE ANALYSIS PILLS ── */
+function togglePill(el) {
+  el.classList.toggle('selected');
+  updateCounts();
+}
+
+function togglePlot(el) {
+  el.classList.toggle('selected');
+  updateCounts();
+}
+
+function updateCounts() {
+  document.getElementById('analysis-count').textContent =
+    document.querySelectorAll('.analysis-pill.selected').length;
+  document.getElementById('plot-count').textContent =
+    document.querySelectorAll('.plot-card.selected').length;
+}
+
+/* ── FILE DROP ZONES ── */
+function dzDrag(e, id) {
+  e.preventDefault();
+  document.getElementById(id).classList.add('dragover');
+}
+function dzLeave(id) {
+  document.getElementById(id).classList.remove('dragover');
+}
+function dzDrop(e, dzId, tagId) {
+  e.preventDefault();
+  document.getElementById(dzId).classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  renderFileTags(files, tagId);
+  updateFileCount();
+}
+function handleFiles(e, tagId) {
+  renderFileTags(e.target.files, tagId);
+  updateFileCount();
+}
+
+function renderFileTags(files, tagId) {
+  const wrap = document.getElementById(tagId);
+  Array.from(files).forEach(f => {
+    const tag = document.createElement('span');
+    tag.className = 'file-tag';
+    tag.textContent = f.name;
+    wrap.appendChild(tag);
+  });
+}
+
+function updateFileCount() {
+  let n = 0;
+  document.querySelectorAll('.file-tag').forEach(() => n++);
+  document.getElementById('file-count').textContent = n;
+}
+
+/* ── RUN PIPELINE ── */
+function startRun() {
+  showToast('Pipeline started', 'Pulling scripts from GitHub…');
+
+  const steps = document.querySelectorAll('.pipeline-step');
+  let i = 0;
+
+  function activateNext() {
+    if (i > 0) {
+      const prev = steps[i - 1];
+      prev.querySelector('.step-icon').className = 'step-icon done';
+      prev.querySelector('.step-icon').textContent = '✓';
+      prev.querySelector('.step-badge').className = 'step-badge badge-ready';
+      prev.querySelector('.step-badge').textContent = 'done';
+    }
+    if (i < steps.length) {
+      const cur = steps[i];
+      cur.querySelector('.step-icon').className = 'step-icon active';
+      cur.querySelector('.step-badge').className = 'step-badge badge-ready';
+      cur.querySelector('.step-badge').textContent = 'running…';
+      i++;
+      const delay = 700 + Math.random() * 900;
+      setTimeout(activateNext, delay);
+    } else {
+      showToast('Analysis complete ✓', 'Results saved to output directory');
+    }
+  }
+
+  document.getElementById('pipeline').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(activateNext, 600);
+}
+
+/* ── TOAST ── */
+function showToast(title, body) {
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-body').textContent = body;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+/* ══════════════════════════════════════════
+   INTERACTIVE NETWORK VISUALISER
+══════════════════════════════════════════ */
+(function() {
+  const nc = document.getElementById('net-canvas');
+  if (!nc) return;
+  const cx = nc.getContext('2d');
+
+  const MODULE_COLORS = {
+    turquoise: '#4db6ac', blue: '#5c9bd4', brown: '#b07040',
+    yellow: '#c9a96e', green: '#7aab8a', red: '#c97d7d'
+  };
+  const MODULES = Object.keys(MODULE_COLORS);
+  const BIOTYPES = ['lncRNA','lncRNA','lncRNA','protein-coding','protein-coding'];
+
+  // Build demo gene network — placeholder until real results load
+  const GENES = [
+    {id:0, name:'MALAT1',   biotype:'lncRNA',         mod:'turquoise', kme:0.94, conn:1842, trait:'r=0.71***'},
+    {id:1, name:'NEAT1',    biotype:'lncRNA',         mod:'turquoise', kme:0.89, conn:1540, trait:'r=0.65***'},
+    {id:2, name:'MIAT',     biotype:'lncRNA',         mod:'red',       kme:0.87, conn:1120, trait:'r=0.59**'},
+    {id:3, name:'H19',      biotype:'lncRNA',         mod:'green',     kme:0.82, conn:940,  trait:'r=0.54**'},
+    {id:4, name:'MEG3',     biotype:'lncRNA',         mod:'blue',      kme:0.85, conn:1080, trait:'r=0.61**'},
+    {id:5, name:'LINC00152',biotype:'lncRNA',         mod:'yellow',    kme:0.78, conn:820,  trait:'r=0.48*'},
+    {id:6, name:'SNHG12',   biotype:'lncRNA',         mod:'brown',     kme:0.76, conn:780,  trait:'r=0.44*'},
+    {id:7, name:'HULC',     biotype:'lncRNA',         mod:'green',     kme:0.80, conn:900,  trait:'r=0.51**'},
+    {id:8, name:'TP53',     biotype:'protein-coding', mod:'turquoise', kme:0.91, conn:1650, trait:'r=0.68***'},
+    {id:9, name:'MYC',      biotype:'protein-coding', mod:'yellow',    kme:0.84, conn:1200, trait:'r=0.57**'},
+    {id:10,name:'STAT3',    biotype:'protein-coding', mod:'blue',      kme:0.79, conn:880,  trait:'r=0.50**'},
+    {id:11,name:'GAPDH',    biotype:'protein-coding', mod:'turquoise', kme:0.86, conn:1310, trait:'r=0.63***'},
+    {id:12,name:'ACTB',     biotype:'protein-coding', mod:'green',     kme:0.81, conn:960,  trait:'r=0.52**'},
+    {id:13,name:'EGFR',     biotype:'protein-coding', mod:'blue',      kme:0.77, conn:810,  trait:'r=0.46*'},
+    {id:14,name:'CDK2',     biotype:'protein-coding', mod:'red',       kme:0.83, conn:1050, trait:'r=0.55**'},
+    {id:15,name:'LINC01116',biotype:'lncRNA',         mod:'brown',     kme:0.74, conn:720,  trait:'r=0.40*'},
+    {id:16,name:'LINC01588',biotype:'lncRNA',         mod:'turquoise', kme:0.88, conn:1380, trait:'r=0.64***'},
+    {id:17,name:'HIF1A',    biotype:'protein-coding', mod:'red',       kme:0.80, conn:920,  trait:'r=0.52**'},
+    {id:18,name:'FOXO1',    biotype:'protein-coding', mod:'yellow',    kme:0.82, conn:1010, trait:'r=0.54**'},
+    {id:19,name:'SIRT1',    biotype:'protein-coding', mod:'green',     kme:0.79, conn:870,  trait:'r=0.49*'},
+  ];
+
+  // add more satellite nodes
+  for (let i = 20; i < 68; i++) {
+    GENES.push({
+      id: i,
+      name: 'GENE' + i,
+      biotype: BIOTYPES[i % BIOTYPES.length],
+      mod: MODULES[i % MODULES.length],
+      kme: +(0.5 + Math.random() * 0.45).toFixed(2),
+      conn: Math.floor(200 + Math.random() * 900),
+      trait: 'r=' + (Math.random() * 0.7).toFixed(2)
+    });
+  }
+
+  // Build edges (TOM-style threshold)
+  const EDGES = [];
+  for (let i = 0; i < GENES.length; i++) {
+    for (let j = i+1; j < GENES.length; j++) {
+      const sameModule = GENES[i].mod === GENES[j].mod;
+      const prob = sameModule ? 0.45 : 0.06;
+      if (Math.random() < prob) EDGES.push([i, j]);
+    }
+  }
+
+  let NW, NH;
+  let netNodes = [];
+  let dragging = null, dragOffX = 0, dragOffY = 0;
+  let selectedNode = null;
+  let activeFilter = null; // module filter
+  let biotypeFilter = 'all';
+  let highlightNeighSet = null;
+  let netFrame = 0;
+
+  function initNodes() {
+    NW = nc.width = nc.offsetWidth;
+    NH = nc.height = nc.offsetHeight;
+    netNodes = GENES.map((g, i) => ({
+      ...g,
+      x: 80 + Math.random() * (NW - 160),
+      y: 80 + Math.random() * (NH - 160),
+      vx: (Math.random()-0.5)*0.6,
+      vy: (Math.random()-0.5)*0.6,
+      r: g.biotype === 'lncRNA' ? 8 + g.kme * 6 : 5 + g.kme * 4,
+    }));
+  }
+  initNodes();
+  window.addEventListener('resize', initNodes);
+
+  function visibleNodes() {
+    return netNodes.filter(n => {
+      if (biotypeFilter === 'lnc' && n.biotype !== 'lncRNA') return false;
+      if (biotypeFilter === 'pc'  && n.biotype !== 'protein-coding') return false;
+      if (activeFilter && n.mod !== activeFilter) return false;
+      return true;
+    });
+  }
+
+  function drawNet() {
+    NW = nc.width = nc.offsetWidth;
+    NH = nc.height = nc.offsetHeight;
+    cx.clearRect(0, 0, NW, NH);
+    netFrame++;
+
+    const vis = new Set(visibleNodes().map(n => n.id));
+
+    // Physics (force-directed)
+    netNodes.forEach(n => {
+      if (!vis.has(n.id) || n === dragging) return;
+      // repulsion
+      netNodes.forEach(m => {
+        if (m.id === n.id || !vis.has(m.id)) return;
+        const dx = n.x - m.x, dy = n.y - m.y;
+        const d = Math.sqrt(dx*dx + dy*dy) || 1;
+        if (d < 120) {
+          const f = (120 - d) / 120 * 0.4;
+          n.vx += dx/d * f; n.vy += dy/d * f;
+        }
+      });
+      // attraction to centre
+      n.vx += (NW/2 - n.x) * 0.0003;
+      n.vy += (NH/2 - n.y) * 0.0003;
+      // damping
+      n.vx *= 0.92; n.vy *= 0.92;
+      n.x += n.vx; n.y += n.vy;
+      n.x = Math.max(n.r+4, Math.min(NW-n.r-4, n.x));
+      n.y = Math.max(n.r+4, Math.min(NH-n.r-4, n.y));
+    });
+
+    // Draw edges
+    EDGES.forEach(([a, b]) => {
+      if (!vis.has(a) || !vis.has(b)) return;
+      const na = netNodes[a], nb = netNodes[b];
+      const sameM = na.mod === nb.mod;
+      let alpha = sameM ? 0.22 : 0.07;
+      if (highlightNeighSet) {
+        alpha = (highlightNeighSet.has(a) && highlightNeighSet.has(b)) ? 0.5 : 0.03;
+      }
+      cx.beginPath();
+      cx.moveTo(na.x, na.y);
+      cx.lineTo(nb.x, nb.y);
+      cx.strokeStyle = MODULE_COLORS[na.mod] + Math.round(alpha*255).toString(16).padStart(2,'0');
+      cx.lineWidth = sameM ? 1.2 : 0.6;
+      cx.stroke();
+    });
+
+    // Draw nodes
+    visibleNodes().forEach(n => {
+      const isSelected = selectedNode && selectedNode.id === n.id;
+      const isHighlighted = highlightNeighSet && highlightNeighSet.has(n.id);
+      const baseAlpha = highlightNeighSet ? (isHighlighted ? 1 : 0.2) : 1;
+      const col = MODULE_COLORS[n.mod];
+
+      // glow for selected/hub
+      if (isSelected || (n.kme > 0.88 && !highlightNeighSet)) {
+        cx.beginPath();
+        cx.arc(n.x, n.y, n.r + 6, 0, Math.PI*2);
+        cx.fillStyle = col + '28';
+        cx.fill();
+      }
+
+      // node body
+      cx.beginPath();
+      cx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+      const alpha = Math.round(baseAlpha * (isSelected ? 255 : 200)).toString(16).padStart(2,'0');
+      cx.fillStyle = col + alpha;
+      cx.fill();
+
+      // lncRNA ring
+      if (n.biotype === 'lncRNA') {
+        cx.beginPath();
+        cx.arc(n.x, n.y, n.r + 2.5, 0, Math.PI*2);
+        cx.strokeStyle = col + (Math.round(baseAlpha*180)).toString(16).padStart(2,'0');
+        cx.lineWidth = 1.2;
+        cx.stroke();
+      }
+
+      // label for hub or selected
+      if (n.kme > 0.84 || isSelected) {
+        cx.font = isSelected ? 'bold 10px Inter, sans-serif' : '9px Inter, sans-serif';
+        cx.fillStyle = 'rgba(245,240,232,' + baseAlpha + ')';
+        cx.textAlign = 'center';
+        cx.fillText(n.name, n.x, n.y - n.r - 4);
+      }
+    });
+
+    requestAnimationFrame(drawNet);
+  }
+  drawNet();
+
+  // Mouse interaction
+  nc.addEventListener('mousedown', e => {
+    const rect = nc.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const hit = visibleNodes().find(n => {
+      const dx = n.x - mx, dy = n.y - my;
+      return Math.sqrt(dx*dx+dy*dy) <= n.r + 4;
+    });
+    if (hit) {
+      dragging = hit;
+      dragOffX = mx - hit.x;
+      dragOffY = my - hit.y;
+      showGenePanel(hit);
+    } else {
+      closeGenePanel();
+    }
+  });
+
+  nc.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect = nc.getBoundingClientRect();
+    dragging.x = e.clientX - rect.left - dragOffX;
+    dragging.y = e.clientY - rect.top  - dragOffY;
+    dragging.vx = 0; dragging.vy = 0;
+  });
+
+  nc.addEventListener('mouseup', () => { dragging = null; });
+
+  function showGenePanel(n) {
+    selectedNode = n;
+    const panel = document.getElementById('gene-panel');
+    document.getElementById('gp-name').textContent    = n.name;
+    document.getElementById('gp-biotype').textContent = n.biotype;
+    document.getElementById('gp-biotype').className   = 'gp-val ' + (n.biotype==='lncRNA'?'lnc-val':'');
+    document.getElementById('gp-module').textContent  = n.mod;
+    document.getElementById('gp-kme').textContent     = n.kme.toFixed(2);
+    document.getElementById('gp-conn').textContent    = n.conn.toLocaleString();
+    document.getElementById('gp-trait').textContent   = n.trait;
+    document.getElementById('gp-chr').textContent     = 'chr' + (n.id % 22 + 1) + ':' + (10000000 + n.id * 3456789);
+    const neigh = EDGES.filter(([a,b]) => a===n.id||b===n.id).length;
+    document.getElementById('gp-neigh').textContent   = neigh;
+    panel.style.display = 'block';
+    document.getElementById('vn-selected').style.display = 'inline';
+  }
+
+  window.closeGenePanel = function() {
+    document.getElementById('gene-panel').style.display = 'none';
+    document.getElementById('vn-selected').style.display = 'none';
+    selectedNode = null;
+    highlightNeighSet = null;
+  };
+
+  window.highlightNeighbours = function() {
+    if (!selectedNode) return;
+    const set = new Set([selectedNode.id]);
+    EDGES.forEach(([a,b]) => {
+      if (a === selectedNode.id) set.add(b);
+      if (b === selectedNode.id) set.add(a);
+    });
+    highlightNeighSet = set;
+  };
+
+  window.filterModule = function(mod) {
+    activeFilter = mod;
+    highlightNeighSet = null;
+  };
+
+  window.filterBiotype = function(type) {
+    biotypeFilter = type;
+    ['all','lnc','pc'].forEach(t => {
+      document.getElementById('fb-'+t).classList.toggle('active', t===type);
+    });
+    highlightNeighSet = null;
+  };
+
+  window.setLayout = function(layout) {
+    document.querySelectorAll('.viz-btn').forEach(b => {
+      if (['Force','Radial','Cluster'].includes(b.textContent)) b.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    // Reposition nodes by layout
+    const vis = visibleNodes();
+    if (layout === 'radial') {
+      vis.forEach((n, i) => {
+        const angle = (i / vis.length) * Math.PI * 2;
+        n.x = NW/2 + Math.cos(angle) * (Math.min(NW,NH)*0.35);
+        n.y = NH/2 + Math.sin(angle) * (Math.min(NW,NH)*0.35);
+        n.vx = 0; n.vy = 0;
+      });
+    } else if (layout === 'cluster') {
+      const modList = Object.keys(MODULE_COLORS);
+      vis.forEach(n => {
+        const mi = modList.indexOf(n.mod);
+        const angle = (mi / modList.length) * Math.PI * 2;
+        const cx2 = NW/2 + Math.cos(angle) * NW*0.28;
+        const cy2 = NH/2 + Math.sin(angle) * NH*0.28;
+        n.x = cx2 + (Math.random()-0.5)*80;
+        n.y = cy2 + (Math.random()-0.5)*80;
+        n.vx = 0; n.vy = 0;
+      });
+    } else {
+      vis.forEach(n => {
+        n.x = 80 + Math.random() * (NW-160);
+        n.y = 80 + Math.random() * (NH-160);
+        n.vx = (Math.random()-0.5)*0.6;
+        n.vy = (Math.random()-0.5)*0.6;
+      });
+    }
+  };
+
+  window.resetViz = function() {
+    activeFilter = null;
+    biotypeFilter = 'all';
+    highlightNeighSet = null;
+    selectedNode = null;
+    ['all','lnc','pc'].forEach(t => document.getElementById('fb-'+t).classList.toggle('active', t==='all'));
+    document.getElementById('gene-panel').style.display = 'none';
+    initNodes();
+  };
+
+  // update counts
+  document.getElementById('vn-count').textContent = GENES.length;
+  document.getElementById('ve-count').textContent = EDGES.length;
+})();
+
+/* ══════════════════════════════════════════
+   MULTI-ORGAN COMPARISON MATRIX
+══════════════════════════════════════════ */
+(function() {
+  const organs = ['Heart','Liver','Adipose','Muscle','Kidney'];
+  const scores = [
+    [null, 14.2, 8.7, null, null],
+    [14.2, null, 11.3, null, null],
+    [8.7,  11.3, null, null, null],
+    [null, null, null, null, null],
+    [null, null, null, null, null],
+  ];
+
+  const tbody = document.getElementById('matrix-body');
+  if (!tbody) return;
+
+  organs.forEach((organ, i) => {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    const chipClass = organ.toLowerCase() + '-chip';
+    th.innerHTML = `<span class="organ-chip ${chipClass}">${organ}</span>`;
+    tr.appendChild(th);
+    organs.forEach((_, j) => {
+      const td = document.createElement('td');
+      if (i === j) {
+        td.textContent = '—';
+        td.className = 'cell-self';
+      } else if (scores[i][j] === null) {
+        td.textContent = 'N/A';
+        td.className = 'cell-empty';
+      } else {
+        const v = scores[i][j];
+        td.textContent = v.toFixed(1);
+        td.className = v > 10 ? 'cell-high' : v > 5 ? 'cell-med' : 'cell-low';
+        td.title = `Preservation Z-score: ${v} (${organ} → ${organs[j]})`;
+        td.onclick = () => showToast('Module Preservation', `${organ}↔${organs[j]}: Z = ${v}`);
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  // Shared hub lncRNAs
+  const sharedData = [
+    { name:'MALAT1',   organs:['Heart','Liver','Adipose'], n:3 },
+    { name:'NEAT1',    organs:['Heart','Liver'],           n:2 },
+    { name:'H19',      organs:['Liver','Adipose'],         n:2 },
+    { name:'MEG3',     organs:['Heart','Adipose'],         n:2 },
+    { name:'LINC01588',organs:['Heart','Liver'],           n:2 },
+    { name:'MIAT',     organs:['Heart'],                   n:1 },
+  ];
+  const colors = { Heart:'#c97d7d', Liver:'#7aab8a', Adipose:'#c9a96e', Muscle:'#5c9bd4', Kidney:'#b482c8' };
+  const list = document.getElementById('shared-gene-list');
+  if (list) sharedData.forEach(g => {
+    const row = document.createElement('div');
+    row.className = 'shared-gene-row';
+    row.innerHTML = `<span class="sg-name">${g.name}</span>
+      <span class="sg-organs">${g.organs.map(o => `<span class="sg-dot" style="background:${colors[o]}" title="${o}"></span>`).join('')}</span>
+      <span class="sg-count">${g.n} organ${g.n>1?'s':''}</span>`;
+    row.onclick = () => showToast(g.name, `Hub lncRNA in: ${g.organs.join(', ')}`);
+    list.appendChild(row);
+  });
+})();
+
+window.selectOrgan = function(el, name) {
+  document.querySelectorAll('.organ-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  showToast(name + ' selected', 'Cross-organ comparison updated');
+};
+
+/* ══════════════════════════════════════════
+   DE RESULTS TABLE
+══════════════════════════════════════════ */
+(function() {
+  const moduleColors = { turquoise:'#4db6ac', blue:'#5c9bd4', brown:'#b07040', yellow:'#c9a96e', green:'#7aab8a', red:'#c97d7d' };
+
+  // Placeholder data — replaced on page load by /api/results/de
+  window._deData = [
+    { gene:'MALAT1',    biotype:'lncRNA',         lfc:2.41,  padj:1.2e-8,  mod:'turquoise', kme:0.94, hub:true  },
+    { gene:'NEAT1',     biotype:'lncRNA',         lfc:1.87,  padj:3.4e-7,  mod:'turquoise', kme:0.89, hub:true  },
+    { gene:'MIAT',      biotype:'lncRNA',         lfc:1.62,  padj:8.1e-6,  mod:'red',       kme:0.87, hub:true  },
+    { gene:'LINC01588', biotype:'lncRNA',         lfc:2.08,  padj:2.2e-7,  mod:'turquoise', kme:0.88, hub:true  },
+    { gene:'H19',       biotype:'lncRNA',         lfc:-1.54, padj:1.9e-5,  mod:'green',     kme:0.82, hub:true  },
+    { gene:'MEG3',      biotype:'lncRNA',         lfc:-1.32, padj:4.1e-5,  mod:'blue',      kme:0.85, hub:true  },
+    { gene:'LINC00152', biotype:'lncRNA',         lfc:1.18,  padj:0.00021, mod:'yellow',    kme:0.78, hub:false },
+    { gene:'SNHG12',    biotype:'lncRNA',         lfc:-0.94, padj:0.00089, mod:'brown',     kme:0.76, hub:false },
+    { gene:'HULC',      biotype:'lncRNA',         lfc:1.43,  padj:5.8e-5,  mod:'green',     kme:0.80, hub:false },
+    { gene:'LINC01116', biotype:'lncRNA',         lfc:-1.11, padj:0.00041, mod:'brown',     kme:0.74, hub:false },
+    { gene:'TP53',      biotype:'protein-coding', lfc:-2.81, padj:9.1e-12, mod:'turquoise', kme:0.91, hub:true  },
+    { gene:'MYC',       biotype:'protein-coding', lfc:1.96,  padj:1.4e-8,  mod:'yellow',    kme:0.84, hub:true  },
+    { gene:'STAT3',     biotype:'protein-coding', lfc:-1.74, padj:3.3e-7,  mod:'turquoise', kme:0.86, hub:true  },
+    { gene:'HIF1A',     biotype:'protein-coding', lfc:-1.55, padj:6.7e-6,  mod:'red',       kme:0.83, hub:true  },
+    { gene:'ACTB',      biotype:'protein-coding', lfc:-2.12, padj:4.4e-9,  mod:'green',     kme:0.81, hub:true  },
+  ];
+
+  let sortCol = 2, sortAsc = false, page = 0, filtered = window._deData;
+  const PAGE_SIZE = 6;
+
+  function fmtPadj(p) {
+    if (p < 1e-10) return '<1e-10';
+    if (p < 1e-4) return p.toExponential(1);
+    return p.toFixed(4);
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('de-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const slice = filtered.slice(page*PAGE_SIZE, (page+1)*PAGE_SIZE);
+    slice.forEach(row => {
+      const tr = document.createElement('tr');
+      const col = moduleColors[row.mod] || '#888';
+      const fcClass = row.lfc >= 0 ? 'fc-up' : 'fc-down';
+      tr.innerHTML = `
+        <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${row.gene}</td>
+        <td><span class="gene-type ${row.biotype==='lncRNA'?'type-lnc':'type-pc'}">${row.biotype==='lncRNA'?'lncRNA':'prot-cod'}</span></td>
+        <td class="${fcClass}">${row.lfc >= 0 ? '+':''}${row.lfc.toFixed(2)}</td>
+        <td class="padj-val">${fmtPadj(row.padj)}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:0.4rem"><span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block"></span>${row.mod}</span></td>
+        <td class="kme-val">${row.kme.toFixed(2)}</td>
+        <td class="hub-star">${row.hub ? '★' : '—'}</td>`;
+      tr.onclick = () => showToast(row.gene, `kME ${row.kme} · log₂FC ${row.lfc > 0 ? '+':''}${row.lfc.toFixed(2)} · ${row.mod} module`);
+      tbody.appendChild(tr);
+    });
+    const cnt = document.getElementById('table-count');
+    if (cnt) cnt.textContent = `Showing ${Math.min((page+1)*PAGE_SIZE, filtered.length)} of ${filtered.length} genes`;
+  }
+
+  window.filterTable = function(val) {
+    const q = val.toLowerCase();
+    filtered = window._deData.filter(r =>
+      r.gene.toLowerCase().includes(q) || r.biotype.includes(q) || r.mod.includes(q)
+    );
+    page = 0;
+    renderTable();
+  };
+
+  let sortDir = [-1,-1,1,-1,-1,1];
+  window.sortTable = function(col) {
+    sortDir[col] *= -1;
+    filtered.sort((a, b) => {
+      const keys = ['gene','biotype','lfc','padj','mod','kme'];
+      return a[keys[col]] > b[keys[col]] ? sortDir[col] : -sortDir[col];
+    });
+    renderTable();
+  };
+
+  window.changePage = function(dir) {
+    const maxPage = Math.ceil(filtered.length / PAGE_SIZE) - 1;
+    page = Math.max(0, Math.min(maxPage, page + dir));
+    renderTable();
+  };
+
+  window.exportTable = function() {
+    const header = 'Gene,Biotype,log2FC,padj,Module,kME,Hub\n';
+    const rows = window._deData.map(r =>
+      `${r.gene},${r.biotype},${r.lfc},${r.padj},${r.mod},${r.kme},${r.hub}`
+    ).join('\n');
+    const blob = new Blob([header + rows], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'arcana_de_results.csv'; a.click();
+    showToast('Exported', 'DE results saved as CSV');
+  };
+
+  renderTable();
+})();
+
+/* ══════════════════════════════════════════
+   ENRICHMENT LIST
+══════════════════════════════════════════ */
+(function() {
+  // Placeholder enrichment data — replaced on load by /api/results/enrichment
+  const enrichData = {
+    'GO:BP': [
+      { term:'Regulation of gene expression',          genes:42, pval:'3.2e-9',  ratio:0.88 },
+      { term:'mRNA processing',                        genes:28, pval:'1.1e-8',  ratio:0.82 },
+      { term:'Regulation of apoptotic process',        genes:35, pval:'4.4e-8',  ratio:0.79 },
+      { term:'Cell cycle regulation',                  genes:19, pval:'2.1e-6',  ratio:0.71 },
+      { term:'Response to hypoxia',                    genes:24, pval:'6.8e-6',  ratio:0.68 },
+      { term:'Mitochondrial electron transport chain', genes:31, pval:'1.3e-5',  ratio:0.64 },
+      { term:'Chromatin remodelling',                  genes:22, pval:'3.9e-5',  ratio:0.60 },
+    ],
+    'GO:MF': [
+      { term:'RNA binding',                            genes:58, pval:'9.1e-7',  ratio:0.92 },
+      { term:'DNA-binding transcription factor',       genes:32, pval:'2.3e-6',  ratio:0.84 },
+      { term:'Protein kinase activity',                genes:27, pval:'1.4e-5',  ratio:0.75 },
+    ],
+    'KEGG': [
+      { term:'MAPK signaling pathway',                 genes:38, pval:'5.5e-10', ratio:0.94 },
+      { term:'PI3K–Akt signaling pathway',             genes:31, pval:'1.2e-9',  ratio:0.90 },
+      { term:'AMPK signaling pathway',                 genes:27, pval:'3.3e-8',  ratio:0.81 },
+      { term:'p53 signaling pathway',                  genes:22, pval:'8.1e-7',  ratio:0.74 },
+      { term:'mTOR signaling pathway',                 genes:29, pval:'1.6e-6',  ratio:0.70 },
+    ],
+    'Reactome': [
+      { term:'Gene expression (Transcription)',        genes:45, pval:'2.1e-11', ratio:0.96 },
+      { term:'mRNA Splicing',                          genes:28, pval:'4.4e-9',  ratio:0.88 },
+      { term:'PI3K/AKT Signaling',                     genes:34, pval:'9.9e-9',  ratio:0.85 },
+    ],
+  };
+
+  function renderEnrich(category) {
+    const list = document.getElementById('enrich-list');
+    if (!list) return;
+    list.innerHTML = '';
+    (enrichData[category] || enrichData['GO:BP']).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'enrich-item';
+      div.innerHTML = `
+        <div class="enrich-term">${item.term}</div>
+        <div class="enrich-meta">
+          <span>${item.genes} genes</span>
+          <span class="enrich-pval">p = ${item.pval}</span>
+        </div>
+        <div class="enrich-bar-wrap"><div class="enrich-bar" style="width:${item.ratio*100}%"></div></div>`;
+      div.onclick = () => showToast(item.term, `${item.genes} genes · p = ${item.pval}`);
+      list.appendChild(div);
+    });
+  }
+
+  window.switchEnrich = function(cat) { renderEnrich(cat); };
+  renderEnrich('GO:BP');
+})();
+
+/* ══════════════════════════════════════════
+   DOWNLOAD MANAGER
+══════════════════════════════════════════ */
+window.dlItem = function(el) {
+  const name = el.querySelector('.dl-name').textContent;
+  el.classList.add('downloading');
+  showToast('Preparing download', name);
+  setTimeout(() => {
+    el.classList.remove('downloading');
+    el.classList.add('done');
+    showToast('Ready ✓', name + ' saved to output directory');
+  }, 1800);
+};
+
+/* ══════════════════════════════════════════
+   SETTINGS PANEL
+══════════════════════════════════════════ */
+window.openSettings = function() {
+  document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('settings-panel').classList.add('open');
+};
+window.closeSettings = function() {
+  document.getElementById('settings-overlay').classList.remove('open');
+  document.getElementById('settings-panel').classList.remove('open');
+};
+
+/* ── Nav link updates ── */
+const navLinks = document.querySelectorAll('.nav-links a');
+const sectionIds = ['upload','analysis','plots','pipeline','history','network-viz','compare','results-dashboard','downloads'];
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.style.color = l.getAttribute('href') === '#'+e.target.id ? 'var(--cream)' : '');
+    }
+  });
+}, { threshold: 0.4 });
+sectionIds.forEach(id => { const el = document.getElementById(id); if(el) observer.observe(el); });
+</script>
+
+<!-- ── ARCANA API bridge ── -->
+<script src="api.js?v=2"></script>
+<script>
+// Wire the Run Pipeline button to the real backend
+(function () {
+  const runBtn = document.querySelector('.btn-run');
+  if (!runBtn) return;
+
+  runBtn.addEventListener('click', async () => {
+    const alive = await ARCANA_API.ping();
+    if (!alive) {
+      showToast('Backend offline', 'Start the ARCANA server first:\nuvicorn app.backend.main:app --reload');
+      return;
+    }
+
+    const runName = document.querySelector('#run-name-input')?.value || ('Run ' + new Date().toLocaleDateString());
+    runBtn.disabled = true;
+    runBtn.textContent = '⟳ Queuing...';
+
+    try {
+      const { run_id } = await ARCANA_API.startRun({ name: runName });
+
+      // Update pipeline status UI
+      const steps = document.querySelectorAll('.pipeline-step');
+      const stepMap = {};
+      steps.forEach(el => { const id = el.dataset.stepId; if (id) stepMap[id] = el; });
+
+      ARCANA_API.connectRunWS(run_id, {
+        onStepStart(msg) {
+          runBtn.textContent = `⟳ Running: ${msg.label || msg.step}`;
+          const el = stepMap[msg.step];
+          if (el) {
+            el.querySelector('.step-icon')?.classList.replace('waiting', 'active');
+            const badge = el.querySelector('.step-badge');
+            if (badge) { badge.textContent = 'RUNNING'; badge.className = 'step-badge badge-queued'; }
+          }
+        },
+        onLog(msg) {
+          // Append to any visible log panel
+          const logEl = document.getElementById('pipeline-log');
+          if (logEl) {
+            logEl.textContent += msg.text + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+          }
+        },
+        onStepDone(msg) {
+          const el = stepMap[msg.step];
+          if (el) {
+            el.querySelector('.step-icon')?.classList.replace('active', 'done');
+            el.querySelector('.step-icon').textContent = '✓';
+            const badge = el.querySelector('.step-badge');
+            if (badge) { badge.textContent = 'DONE'; badge.className = 'step-badge badge-ready'; }
+          }
+        },
+        onError(msg) {
+          runBtn.disabled = false;
+          runBtn.textContent = '✕ Step failed — retry';
+          showToast('Pipeline error', `Step "${msg.step}" failed. Check logs.`);
+        },
+        onComplete(msg) {
+          runBtn.disabled = false;
+          runBtn.textContent = '✓ Run complete — start new';
+          showToast('Run complete', 'Figures and report written to results/reports/');
+
+          // Reload DE table & hub genes from backend
+          ARCANA_API.getDEResults().then(rows => { window.__ARCANA_DE__ = rows; }).catch(() => {});
+          ARCANA_API.getHubGenes().then(rows => { window.__ARCANA_HUBS__ = rows; }).catch(() => {});
+          ARCANA_API.listFigures().then(figs => { window.__ARCANA_FIGS__ = figs; }).catch(() => {});
+        },
+      });
+
+      showToast('Pipeline started', `Run ID: ${run_id}`);
+    } catch (err) {
+      runBtn.disabled = false;
+      runBtn.textContent = '✕ Error — retry';
+      showToast('Error', err.message);
+    }
+  });
+
+  // File upload wiring
+  document.querySelectorAll('input[type="file"]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      const file = inp.files[0];
+      if (!file) return;
+      const alive = await ARCANA_API.ping();
+      if (!alive) return; // demo mode — skip upload
+      try {
+        if (inp.closest('.upload-card')?.querySelector('h3')?.textContent?.includes('Count')) {
+          await ARCANA_API.uploadCounts(file);
+          showToast('Counts uploaded', file.name);
+        } else {
+          await ARCANA_API.uploadMetadata(file);
+          showToast('Metadata uploaded', file.name);
+        }
+      } catch (e) {
+        showToast('Upload error', e.message);
+      }
+    });
+  });
+
+  // Gene search → document lookup
+  window.searchGeneInDocs = async (geneName) => {
+    const alive = await ARCANA_API.ping();
+    if (!alive) return [];
+    return ARCANA_API.searchDocs(geneName);
+  };
+})();
+</script>
+
+<!-- ── Live Dashboard: load real results on startup ── -->
+<script>
+(async function initDashboard() {
+  const alive = await ARCANA_API.ping();
+  if (!alive) return; // demo mode — nothing to load
+
+  // ── 0. Load project config → drives the whole UI ─────────────────────────
+  let projectConfig = {};
+  try {
+    projectConfig = await fetch(`${ARCANA_API.BASE}/api/config`).then(r => r.json());
+    window.__ARCANA_CONFIG__ = projectConfig;
+
+    const proj = projectConfig.project || {};
+    const comps = projectConfig.comparisons || [];
+
+    // Update hero eyebrow, subtitle, description with real project info
+    const eyebrow = document.getElementById('project-eyebrow');
+    if (eyebrow && proj.name) eyebrow.textContent = proj.name;
+
+    const sub = document.getElementById('project-subtitle');
+    const sp = (projectConfig.species || {}).name || 'human';
+    if (sub) sub.textContent = `${sp.charAt(0).toUpperCase()+sp.slice(1)} · ${comps.length} comparison${comps.length!==1?'s':''} · lncRNA co-expression`;
+
+    const desc = document.getElementById('project-desc');
+    if (desc && proj.description) desc.textContent = proj.description;
+
+    // Update nav badge
+    const navBadge = document.querySelector('.nav-badge');
+    if (navBadge && proj.dataset_id) navBadge.textContent = proj.dataset_id + ' · connected';
+
+    // Update DE sub-heading to show active comparisons
+    const deSub = document.getElementById('de-subtitle');
+    if (deSub && comps.length) {
+      deSub.textContent = `DESeq2 · ${comps.map(c => c.label || c.name).join(' | ')}`;
+    }
+
+    // Update gene panel trait label from config
+    const traits = projectConfig.traits || {};
+    const allTraits = [...(traits.continuous||[]), ...(traits.binary||[])];
+    const traitLabel = document.getElementById('gp-trait-label');
+    if (traitLabel && allTraits.length) traitLabel.textContent = allTraits[0] + ' corr.';
+
+    // Update volcano download filename
+    const volcanoName = document.getElementById('dl-volcano-name');
+    if (volcanoName && comps.length) volcanoName.textContent = `volcano_${comps[0].name}.pdf`;
+
+  } catch(e) { console.warn('config load failed', e); }
+
+  // ── 1. Summary stats in hero ──────────────────────────────────────────────
+  try {
+    const summary = await fetch(`${ARCANA_API.BASE}/api/results/summary`).then(r => r.json());
+    window.__ARCANA_SUMMARY__ = summary;
+
+    const comps = projectConfig.comparisons || [];
+    const s = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    s('stat-modules',     summary.n_modules      || '—');
+    s('stat-de',          summary.n_de_significant || '—');
+    s('stat-comparisons', (summary.comparisons_available || comps.map(c=>c.name) || []).length || comps.length || '—');
+    s('stat-figures',     summary.figures_available || '—');
+  } catch(e) { console.warn('summary load failed', e); }
+
+  // ── 2. DE table with comparison selector ─────────────────────────────────
+  function renderDETable(deRows) {
+    const tbody = document.querySelector('.de-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!deRows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">No results</td></tr>';
+      return;
+    }
+    const first = deRows[0];
+    const nameCol    = ['gene_symbol','gene_name','gene_id','gene_symbol.x'].find(c => c in first) || Object.keys(first)[0];
+    const lfcCol     = ['log2FoldChange','logFC','LFC','log2FC'].find(c => c in first);
+    const padjCol    = ['padj','adj.P.Val','FDR','padj'].find(c => c in first);
+    const biotypeCol = ['biotype','gene_biotype','biotype.x'].find(c => c in first);
+    const kmeCol     = ['kME','kme','kME_hub'].find(c => c in first);
+
+    deRows.slice(0, 300).forEach(r => {
+      const lfc  = parseFloat(r[lfcCol]  || 0);
+      const padj = parseFloat(r[padjCol] || 1);
+      const sym  = r[nameCol] || '—';
+      const bio  = r[biotypeCol] || '';
+      const kme  = r[kmeCol] ? parseFloat(r[kmeCol]).toFixed(3) : '—';
+      const isLnc = /lncRNA|lnc|antisense|lincRNA/i.test(bio);
+      const isSig = padj < 0.05;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.82rem">${sym}</td>
+        <td><span style="font-size:0.7rem;padding:0.15rem 0.45rem;border-radius:0.2rem;background:${isLnc?'rgba(201,125,125,0.12)':'rgba(122,171,138,0.12)'};color:${isLnc?'var(--rose)':'var(--sage)'}">${bio||'—'}</span></td>
+        <td class="${lfc>0?'fc-up':'fc-down'}">${lfc>0?'+':''}${lfc.toFixed(3)}</td>
+        <td class="padj-val">${padj<0.001?padj.toExponential(2):padj.toFixed(4)}</td>
+        <td class="kme-val">${kme}</td>
+        <td>${isSig?'<span class="hub-star" title="Significant">★</span>':''}</td>`;
+      tbody.appendChild(tr);
+    });
+    const footer = document.querySelector('.table-footer');
+    if (footer) {
+      const span = footer.querySelector('span');
+      if (span) span.textContent = `${Math.min(300,deRows.length)} of ${deRows.length} genes`;
+    }
+  }
+
+  try {
+    // Inject comparison selector above the DE table
+    const dashCard = document.querySelector('.dash-card');
+    if (dashCard && !document.getElementById('de-controls')) {
+      const ctrl = document.createElement('div');
+      ctrl.id = 'de-controls';
+      ctrl.style.cssText = 'display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;margin-bottom:0.8rem';
+      // Build comparison options from config (falls back to listing real files if config unavailable)
+      const cfgComps = (window.__ARCANA_CONFIG__ || {}).comparisons || [];
+      let compOptions = '';
+      if (cfgComps.length) {
+        compOptions = cfgComps.map(c =>
+          `<option value="${c.name}">${c.label || c.name}</option>`
+        ).join('');
+      } else {
+        // Fallback: discover from actual result files via API
+        try {
+          const liveComps = await ARCANA_API.listDEComparisons ? await ARCANA_API.listDEComparisons() : [];
+          compOptions = liveComps.map(name => `<option value="${name}">${name.replace(/_/g,' ')}</option>`).join('');
+        } catch {}
+      }
+
+      ctrl.innerHTML = `
+        <select id="de-comparison" class="config-input" style="width:auto;font-size:0.78rem;padding:0.4rem 0.7rem">
+          ${compOptions || '<option value="">Loading…</option>'}
+        </select>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="de-lncrna-only" style="cursor:pointer"/>
+          lncRNA only
+        </label>
+        <span id="de-count" style="font-size:0.72rem;color:var(--muted);margin-left:auto"></span>`;
+      const tableWrap = dashCard.querySelector('.table-wrap');
+      if (tableWrap) dashCard.insertBefore(ctrl, tableWrap);
+
+      async function reloadDE() {
+        const firstComp = ((window.__ARCANA_CONFIG__ || {}).comparisons || [])[0]?.name || '';
+        const comp = document.getElementById('de-comparison')?.value || firstComp;
+        const lncOnly = document.getElementById('de-lncrna-only')?.checked || false;
+        const rows = await ARCANA_API.getDEResults(comp, lncOnly);
+        renderDETable(rows);
+        const c = document.getElementById('de-count');
+        if (c) c.textContent = `${rows.length} genes`;
+      }
+
+      document.getElementById('de-comparison')?.addEventListener('change', reloadDE);
+      document.getElementById('de-lncrna-only')?.addEventListener('change', reloadDE);
+    }
+
+    const firstComp = ((window.__ARCANA_CONFIG__ || {}).comparisons || [])[0]?.name || '';
+    const deRows = await ARCANA_API.getDEResults(firstComp, false);
+    renderDETable(deRows);
+    const c = document.getElementById('de-count');
+    if (c) c.textContent = `${deRows.length} genes`;
+  } catch(e) { console.warn('DE load failed', e); }
+
+  // ── 3. Hub gene panel with lncRNA toggle + module filter ──────────────────
+  async function renderHubPanel(lncOnly = true, module = '') {
+    const hubList = document.querySelector('.hub-gene-list');
+    if (!hubList) return;
+    hubList.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem">Loading…</div>';
+    const hubs = await ARCANA_API.getHubGenes({ lncrnaOnly: lncOnly, module, limit: 15 });
+    hubList.innerHTML = '';
+    if (!hubs.length) {
+      hubList.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem">No genes found</div>';
+      return;
+    }
+    const first = hubs[0];
+    const nameCol = ['gene_symbol.x','gene_symbol','gene_name.x','gene_name','gene_id'].find(c => c in first);
+    const bioCol  = ['biotype.x','biotype','gene_biotype'].find(c => c in first);
+    const modCol  = ['module_color','module','moduleColor'].find(c => c in first);
+
+    hubs.forEach(r => {
+      const sym  = r[nameCol] || r.gene_id || '—';
+      const bio  = r[bioCol] || '';
+      const mod  = r[modCol] || '';
+      const isLnc = /lncRNA|lnc|antisense|lincRNA/i.test(bio);
+      const row = document.createElement('div');
+      row.className = 'hub-gene-row';
+      row.style.cursor = 'pointer';
+      row.title = `Click to search in local documents`;
+      row.innerHTML = `
+        <span class="gene-name">${sym}</span>
+        <span class="gene-type ${isLnc?'type-lnc':'type-pc'}">${isLnc?'lncRNA':'PC'}</span>
+        <span style="font-size:0.65rem;color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace">${mod}</span>`;
+      row.addEventListener('click', async () => {
+        const docs = await searchGeneInDocs(sym);
+        if (docs.length) showToast(`${sym} — ${docs.length} doc(s)`, docs[0].excerpt?.slice(0,100)+'…');
+        else showToast(sym, 'Not found in indexed documents');
+      });
+      hubList.appendChild(row);
+    });
+  }
+
+  try {
+    // Inject lncRNA toggle + module filter above hub list
+    const hubCard = document.querySelector('.hub-gene-list')?.closest('.result-card,.dash-card');
+    if (hubCard && !document.getElementById('hub-controls')) {
+      const ctrl = document.createElement('div');
+      ctrl.id = 'hub-controls';
+      ctrl.style.cssText = 'display:flex;gap:0.6rem;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap';
+
+      // Build module pills from focus modules
+      let focusMods = [];
+      try { focusMods = await ARCANA_API.getFocusModules(); } catch{}
+
+      ctrl.innerHTML = `
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="hub-lnc-only" checked style="cursor:pointer"/> lncRNA only
+        </label>
+        <select id="hub-module" class="config-input" style="width:auto;font-size:0.75rem;padding:0.35rem 0.6rem">
+          <option value="">All focus modules</option>
+          ${focusMods.map(m=>`<option value="${m.module_color}">${m.module_color} (${m.n_genes})</option>`).join('')}
+        </select>`;
+
+      const hubList = document.querySelector('.hub-gene-list');
+      if (hubList) hubList.parentNode.insertBefore(ctrl, hubList);
+
+      document.getElementById('hub-lnc-only')?.addEventListener('change', () =>
+        renderHubPanel(document.getElementById('hub-lnc-only').checked, document.getElementById('hub-module')?.value));
+      document.getElementById('hub-module')?.addEventListener('change', () =>
+        renderHubPanel(document.getElementById('hub-lnc-only')?.checked, document.getElementById('hub-module').value));
+    }
+
+    await renderHubPanel(true, ''); // default: lncRNAs across all focus modules
+  } catch(e) { console.warn('hub genes load failed', e); }
+
+  // ── 3b. Module-trait heatmap — find it dynamically from figures list ─────
+  try {
+    const allFigs = await ARCANA_API.listFigures();
+    const heatmapFig = allFigs.find(f =>
+      /module.trait.*heatmap|heatmap.*module.trait/i.test(f.name) && f.type === 'png'
+    );
+    const compareSection = document.getElementById('compare');
+    if (heatmapFig && compareSection && !document.getElementById('mt-heatmap-card')) {
+      const card = document.createElement('div');
+      card.id = 'mt-heatmap-card';
+      card.className = 'compare-card';
+      card.style.cssText = 'grid-column:1/-1;margin-top:1rem';
+      card.innerHTML = `
+        <div class="compare-card-header">
+          <h3>Module–Trait Correlation Heatmap</h3>
+          <p>Pearson correlation between module eigengenes and your configured traits. Red = positive, blue = negative.</p>
+        </div>
+        <img src="${ARCANA_API.BASE}/api/figure?path=${encodeURIComponent(heatmapFig.path)}"
+             style="width:100%;border-radius:0.6rem;border:1px solid var(--border)"
+             onerror="this.parentElement.style.display='none'"/>`;
+      const compareGrid = compareSection.querySelector('.compare-grid');
+      if (compareGrid) compareGrid.parentNode.insertBefore(card, compareGrid.nextSibling);
+    }
+  } catch(e) { console.warn('heatmap load failed', e); }
+
+  // ── 4. Figures gallery ────────────────────────────────────────────────────
+  try {
+    const figs = await ARCANA_API.listFigures();
+    window.__ARCANA_FIGS__ = figs;
+
+    // Inject a figures gallery section after #downloads if not already present
+    if (figs.length && !document.getElementById('figures-gallery')) {
+      const gallerySection = document.createElement('section');
+      gallerySection.id = 'figures-gallery';
+      gallerySection.innerHTML = `
+        <div class="section-eyebrow">RESULTS — ${figs.length} FIGURES</div>
+        <h2 class="section-title">Publication-ready <em>figures</em></h2>
+        <p class="section-lead">Click any figure to view full resolution. All available as PNG, PDF, and SVG from the Export section.</p>
+        <div id="fig-filter" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem"></div>
+        <div id="fig-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem"></div>
+      `;
+
+      const downloadsSection = document.getElementById('downloads');
+      if (downloadsSection) downloadsSection.parentNode.insertBefore(gallerySection, downloadsSection);
+
+      // Category filter pills
+      const cats = [...new Set(figs.map(f => f.category))];
+      const filterDiv = gallerySection.querySelector('#fig-filter');
+      let activeFilter = null;
+
+      function renderGallery(filter) {
+        const grid = gallerySection.querySelector('#fig-grid');
+        grid.innerHTML = '';
+        const shown = filter ? figs.filter(f => f.category === filter) : figs;
+        shown.forEach(fig => {
+          if (fig.type !== 'png' && fig.type !== 'svg') return;
+          const card = document.createElement('div');
+          card.style.cssText = 'background:var(--card-bg);border:1px solid var(--border);border-radius:0.8rem;overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s';
+          card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 8px 30px rgba(0,0,0,0.3)'; };
+          card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = ''; };
+          card.innerHTML = `
+            <img src="${ARCANA_API.BASE}/api/figure?path=${encodeURIComponent(fig.path)}"
+                 loading="lazy"
+                 style="width:100%;height:160px;object-fit:cover;border-bottom:1px solid var(--border)"
+                 onerror="this.style.display='none'"/>
+            <div style="padding:0.75rem">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--cream);margin-bottom:0.2rem">${fig.label}</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace">${fig.category}</div>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.href = `${ARCANA_API.BASE}/api/figure?path=${encodeURIComponent(fig.path)}`;
+            a.target = '_blank'; a.click();
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      // Add category filter pills
+      ['All', ...cats].forEach(cat => {
+        const pill = document.createElement('button');
+        pill.className = 'viz-btn' + (cat === 'All' ? ' active' : '');
+        pill.textContent = cat;
+        pill.addEventListener('click', () => {
+          filterDiv.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+          pill.classList.add('active');
+          renderGallery(cat === 'All' ? null : cat);
+        });
+        filterDiv.appendChild(pill);
+      });
+
+      renderGallery(null);
+    }
+  } catch(e) { console.warn('figures load failed', e); }
+
+  // ── 5. Pipeline log panel ─────────────────────────────────────────────────
+  // Inject a live log panel into the pipeline section
+  const pipelineCard = document.querySelector('.pipeline-card');
+  if (pipelineCard && !document.getElementById('pipeline-log-wrap')) {
+    const logWrap = document.createElement('div');
+    logWrap.id = 'pipeline-log-wrap';
+    logWrap.style.cssText = 'margin-top:1rem;display:none';
+    logWrap.innerHTML = `
+      <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Live log</div>
+      <pre id="pipeline-log" style="background:var(--midnight);border:1px solid var(--border);border-radius:0.5rem;padding:1rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--sage);max-height:260px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></pre>
+    `;
+    pipelineCard.appendChild(logWrap);
+  }
+
+  // Show log panel when run starts
+  const origRunBtn = document.querySelector('.btn-run');
+  if (origRunBtn) {
+    origRunBtn.addEventListener('click', () => {
+      const wrap = document.getElementById('pipeline-log-wrap');
+      const log  = document.getElementById('pipeline-log');
+      if (wrap) { wrap.style.display = 'block'; }
+      if (log)  { log.textContent = ''; }
+    }, { capture: true });
+  }
+
+  // ── 6. Run history table ──────────────────────────────────────────────────
+  try {
+    const runs = await ARCANA_API.listRuns();
+    window.__ARCANA_RUNS__ = runs;
+    if (runs.length) {
+      const histGrid = document.querySelector('.history-grid');
+      if (histGrid) {
+        histGrid.innerHTML = '';
+        runs.slice(0, 6).forEach(run => {
+          const card = document.createElement('div');
+          card.className = 'history-card';
+          const statusColor = run.status === 'complete' ? 'var(--sage)' : run.status === 'failed' ? 'var(--rose)' : 'var(--gold)';
+          const done = JSON.parse(run.steps_done || '[]');
+          card.innerHTML = `
+            <div class="history-header">
+              <span class="history-organ organ-heart" style="background:rgba(122,171,138,0.12);color:${statusColor}">${run.status}</span>
+              <span class="history-date">${(run.started_at || '').slice(0,10)}</span>
+            </div>
+            <div class="history-title">${run.name || 'Unnamed run'}</div>
+            <div class="history-meta">${done.length} step(s) complete · ID: ${run.id}</div>
+            <div class="history-actions">
+              <button class="history-btn" onclick="ARCANA_API.getRun('${run.id}').then(r=>showToast('Run ${run.id}', JSON.stringify(r.params||{}).slice(0,80)))">Details</button>
+            </div>
+          `;
+          histGrid.appendChild(card);
+        });
+      }
+    }
+  } catch(e) { console.warn('run history load failed', e); }
+
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ARCANA-AI  —  Floating chat panel (talks to local Ollama LLM)
+     ══════════════════════════════════════════════════════════════ -->
+<style>
+  /* ── FAB trigger ── */
+  #ai-fab {
+    position: fixed; bottom: 1.6rem; right: 1.6rem; z-index: 900;
+    width: 3.2rem; height: 3.2rem; border-radius: 50%;
+    background: linear-gradient(135deg, #7aab8a, #4a8a5e);
+    border: none; cursor: pointer; font-size: 1.3rem;
+    box-shadow: 0 4px 20px rgba(122,171,138,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #ai-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(122,171,138,0.55); }
+  #ai-fab .ai-fab-badge {
+    position: absolute; top: -4px; right: -4px;
+    width: 0.9rem; height: 0.9rem; border-radius: 50%;
+    background: var(--muted, #8892aa); border: 2px solid var(--bg, #0d0f17);
+    transition: background 0.3s;
+  }
+  #ai-fab .ai-fab-badge.online { background: #7aab8a; }
+
+  /* ── Chat panel ── */
+  #ai-panel {
+    position: fixed; bottom: 5.6rem; right: 1.6rem; z-index: 900;
+    width: min(420px, calc(100vw - 2rem));
+    height: min(560px, calc(100vh - 8rem));
+    background: #13161f; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem; display: flex; flex-direction: column;
+    box-shadow: 0 16px 64px rgba(0,0,0,0.6);
+    transition: opacity 0.2s, transform 0.2s;
+    overflow: hidden;
+  }
+  #ai-panel.hidden { opacity: 0; pointer-events: none; transform: translateY(12px) scale(0.97); }
+
+  .ai-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.8rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .ai-panel-title { font-size: 0.82rem; font-weight: 600; color: #e8ecf4; }
+  .ai-panel-title span { color: #7aab8a; margin-right: 0.4rem; }
+  .ai-panel-model { font-size: 0.68rem; color: #8892aa; }
+  .ai-close-btn {
+    background: none; border: none; cursor: pointer;
+    color: #8892aa; font-size: 1rem; line-height: 1; padding: 0.2rem;
+  }
+  .ai-close-btn:hover { color: #e8ecf4; }
+
+  /* ── Messages ── */
+  #ai-messages {
+    flex: 1; overflow-y: auto; padding: 0.75rem 1rem;
+    display: flex; flex-direction: column; gap: 0.65rem;
+  }
+  #ai-messages::-webkit-scrollbar { width: 4px; }
+  #ai-messages::-webkit-scrollbar-track { background: transparent; }
+  #ai-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .ai-msg {
+    max-width: 88%; padding: 0.55rem 0.85rem;
+    border-radius: 0.75rem; font-size: 0.83rem; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .ai-msg.user {
+    align-self: flex-end;
+    background: rgba(122,171,138,0.15); color: #c2cad8;
+    border: 1px solid rgba(122,171,138,0.25);
+  }
+  .ai-msg.assistant {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.05); color: #c2cad8;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .ai-msg.tool-call {
+    align-self: flex-start; font-size: 0.72rem;
+    background: rgba(201,169,110,0.08); color: #c9a96e;
+    border: 1px solid rgba(201,169,110,0.18);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .ai-msg.error {
+    align-self: flex-start;
+    background: rgba(201,125,125,0.1); color: #c97d7d;
+    border: 1px solid rgba(201,125,125,0.25);
+  }
+  .ai-typing {
+    align-self: flex-start; color: #8892aa; font-size: 0.78rem;
+    padding: 0.4rem 0.7rem; font-style: italic;
+  }
+
+  /* ── Quick prompts ── */
+  .ai-quick-wrap {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+  .ai-quick {
+    font-size: 0.7rem; padding: 0.25rem 0.65rem;
+    border-radius: 2rem; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04); color: #8892aa;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .ai-quick:hover { border-color: #7aab8a; color: #7aab8a; }
+
+  /* ── Input bar ── */
+  .ai-input-row {
+    display: flex; gap: 0.5rem; padding: 0.65rem 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  #ai-input {
+    flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.5rem; color: #e8ecf4; font-size: 0.82rem;
+    padding: 0.45rem 0.75rem; outline: none; resize: none;
+    font-family: inherit; line-height: 1.4;
+  }
+  #ai-input:focus { border-color: rgba(122,171,138,0.4); }
+  #ai-send {
+    background: #7aab8a; color: #0d0f17; border: none; border-radius: 0.5rem;
+    width: 2.2rem; font-size: 1rem; cursor: pointer;
+    flex-shrink: 0; transition: opacity 0.15s;
+  }
+  #ai-send:hover { opacity: 0.85; }
+  #ai-send:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Offline notice ── */
+  #ai-offline {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; padding: 1.5rem; text-align: center; gap: 0.6rem;
+  }
+  .ai-offline-icon { font-size: 2.5rem; }
+  .ai-offline-title { font-size: 0.9rem; font-weight: 600; color: #e8ecf4; }
+  .ai-offline-text { font-size: 0.78rem; color: #8892aa; line-height: 1.6; }
+  .ai-offline-code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+    background: rgba(255,255,255,0.06); padding: 0.5rem 0.9rem;
+    border-radius: 0.4rem; color: #c9a96e; border: 1px solid rgba(255,255,255,0.08);
+    margin-top: 0.4rem; user-select: all;
+  }
+</style>
+
+<!-- FAB button -->
+<button id="ai-fab" aria-label="Open ARCANA-AI chat" title="ARCANA-AI">
+  🧬
+  <span class="ai-fab-badge" id="ai-status-dot"></span>
+</button>
+
+<!-- Chat panel -->
+<div id="ai-panel" class="hidden" role="dialog" aria-label="ARCANA-AI chat">
+  <div class="ai-panel-header">
+    <div>
+      <div class="ai-panel-title"><span>⬡</span> ARCANA-AI</div>
+      <div class="ai-panel-model" id="ai-model-label">Checking Ollama…</div>
+    </div>
+    <button class="ai-close-btn" id="ai-close-btn" aria-label="Close chat">✕</button>
+  </div>
+
+  <!-- Offline state shown when Ollama isn't running -->
+  <div id="ai-offline" style="display:none">
+    <div class="ai-offline-icon">🦙</div>
+    <div class="ai-offline-title">Ollama not running</div>
+    <div class="ai-offline-text">
+      ARCANA-AI needs Ollama for local, private AI — no internet required.
+    </div>
+    <div class="ai-offline-code">brew install ollama</div>
+    <div class="ai-offline-code">ollama serve &amp;</div>
+    <div class="ai-offline-code">ollama pull llama3.2</div>
+    <div style="font-size:0.72rem;color:#8892aa;margin-top:0.8rem">
+      Then refresh this page. All data stays on your machine.
+    </div>
+  </div>
+
+  <!-- Online state -->
+  <div id="ai-messages"></div>
+
+  <div class="ai-quick-wrap" id="ai-quick-wrap">
+    <!-- Prompts are injected dynamically from project config by arcanaAI() -->
+    <button class="ai-quick">List my result files</button>
+    <button class="ai-quick">Run the report writer</button>
+  </div>
+
+  <div class="ai-input-row">
+    <textarea id="ai-input" rows="1" placeholder="Ask about your RNA-seq data…"></textarea>
+    <button id="ai-send">↑</button>
+  </div>
+</div>
+
+<script>
+(async function arcanaAI() {
+  const fab    = document.getElementById('ai-fab');
+  const panel  = document.getElementById('ai-panel');
+  const msgs   = document.getElementById('ai-messages');
+  const input  = document.getElementById('ai-input');
+  const sendBtn= document.getElementById('ai-send');
+  const dot    = document.getElementById('ai-status-dot');
+  const modelLabel = document.getElementById('ai-model-label');
+  const offlineDiv = document.getElementById('ai-offline');
+  const quickWrap  = document.getElementById('ai-quick-wrap');
+
+  let chatHistory = [];
+  let isTyping = false;
+  let aiOnline = false;
+
+  // ── Status check ────────────────────────────────────────────────────────────
+  async function checkStatus() {
+    try {
+      const r = await fetch('${ARCANA_API.BASE}/api/ai/status', { signal: AbortSignal.timeout(2000) });
+      const d = await r.json();
+      aiOnline = d.available;
+      dot.className = 'ai-fab-badge' + (aiOnline ? ' online' : '');
+      if (aiOnline) {
+        const m = d.models?.[0] || 'llama3.2';
+        modelLabel.textContent = `Local · ${m}`;
+        offlineDiv.style.display = 'none';
+        msgs.style.display = '';
+        quickWrap.style.display = '';
+        document.querySelector('.ai-input-row').style.display = '';
+        // Inject config-driven quick prompts
+      const cfg = window.__ARCANA_CONFIG__ || {};
+      const comps = cfg.comparisons || [];
+      const traits = (cfg.traits || {});
+      const allTraits = [...(traits.continuous||[]), ...(traits.binary||[])];
+      if (comps.length || allTraits.length) {
+        quickWrap.innerHTML = '';
+        if (comps.length) {
+          const q1 = document.createElement('button');
+          q1.className = 'ai-quick';
+          q1.textContent = `Summarise ${comps[0].name} DE results`;
+          quickWrap.appendChild(q1);
+        }
+        const q2 = document.createElement('button');
+        q2.className = 'ai-quick';
+        q2.textContent = 'What are the top hub lncRNAs?';
+        quickWrap.appendChild(q2);
+        if (allTraits.length) {
+          const q3 = document.createElement('button');
+          q3.className = 'ai-quick';
+          q3.textContent = `Which modules correlate with ${allTraits[0]}?`;
+          quickWrap.appendChild(q3);
+        }
+        const q4 = document.createElement('button');
+        q4.className = 'ai-quick';
+        q4.textContent = 'List my result files';
+        quickWrap.appendChild(q4);
+        // Re-attach event listeners after rebuilding
+        quickWrap.querySelectorAll('.ai-quick').forEach(btn => {
+          btn.addEventListener('click', () => {
+            input.value = btn.textContent;
+            input.dispatchEvent(new Event('input'));
+          });
+        });
+      }
+
+      const proj = (cfg.project || {});
+      const greeting = proj.name
+        ? `Hello! I'm ARCANA-AI, running 100% locally on your machine.\n\nI'm configured for **${proj.name}**. I can read your results, answer questions about your co-expression modules and hub lncRNAs, run pipeline steps, or inspect your files. What would you like to know?`
+        : 'Hello! I\'m ARCANA-AI, running 100% locally on your machine.\n\nI can read your RNA-seq results, answer questions about your WGCNA modules and hub lncRNAs, run pipeline steps, or inspect FASTQ/BAM files. What would you like to know?';
+      if (!msgs.children.length) addMsg('assistant', greeting);
+      } else {
+        modelLabel.textContent = 'Ollama offline';
+        offlineDiv.style.display = '';
+        msgs.style.display = 'none';
+        quickWrap.style.display = 'none';
+        document.querySelector('.ai-input-row').style.display = 'none';
+      }
+    } catch {
+      aiOnline = false;
+      dot.className = 'ai-fab-badge';
+    }
+  }
+
+  // ── Toggle panel ────────────────────────────────────────────────────────────
+  fab.addEventListener('click', async () => {
+    const hidden = panel.classList.toggle('hidden');
+    if (!hidden) {
+      await checkStatus();
+      if (aiOnline) input.focus();
+    }
+  });
+  document.getElementById('ai-close-btn').addEventListener('click', () => panel.classList.add('hidden'));
+
+  // ── Add message bubble ───────────────────────────────────────────────────────
+  function addMsg(role, text) {
+    const div = document.createElement('div');
+    div.className = `ai-msg ${role}`;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  function setTyping(on) {
+    isTyping = on;
+    sendBtn.disabled = on;
+    let el = document.getElementById('ai-typing-indicator');
+    if (on && !el) {
+      el = document.createElement('div');
+      el.id = 'ai-typing-indicator';
+      el.className = 'ai-typing';
+      el.textContent = 'ARCANA-AI is thinking…';
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    } else if (!on && el) {
+      el.remove();
+    }
+  }
+
+  // ── Send message ─────────────────────────────────────────────────────────────
+  async function sendMessage(text) {
+    text = text.trim();
+    if (!text || isTyping) return;
+
+    addMsg('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+    setTyping(true);
+
+    try {
+      const r = await fetch('${ARCANA_API.BASE}/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: chatHistory }),
+        signal: AbortSignal.timeout(120000),
+      });
+      const d = await r.json();
+      setTyping(false);
+
+      if (d.error) {
+        addMsg('error', '⚠️ ' + d.error);
+      } else {
+        addMsg('assistant', d.response);
+        chatHistory = d.history;
+      }
+    } catch (e) {
+      setTyping(false);
+      addMsg('error', '⚠️ Request failed: ' + e.message);
+    }
+  }
+
+  sendBtn.addEventListener('click', () => sendMessage(input.value));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input.value); }
+  });
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  // ── Quick prompts ─────────────────────────────────────────────────────────────
+  quickWrap.querySelectorAll('.ai-quick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (aiOnline) sendMessage(btn.textContent);
+    });
+  });
+
+  // Initial silent status check (just for the badge)
+  checkStatus();
+})();
+</script>
+
+</body>
+</html>

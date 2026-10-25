@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+LABEL maintainer="ARCANA"
+LABEL description="ARCANA lncRNA co-expression platform backend"
+
+# System deps: R, curl, build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      r-base r-base-dev \
+      libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev \
+      curl build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install R packages (Bioconductor)
+RUN Rscript -e "install.packages(c('BiocManager','jsonlite','data.table','dplyr','readr','tibble','ggplot2','ggrepel','writexl','stringr','tidyr','forcats','yaml'), repos='https://cloud.r-project.org')" \
+ && Rscript -e "BiocManager::install(c('DESeq2','WGCNA','clusterProfiler','EnhancedVolcano','ComplexHeatmap','circlize','org.Hs.eg.db','org.Mm.eg.db','enrichplot','AnnotationDbi'), ask=FALSE)"
+
+WORKDIR /arcana
+
+# Copy application code
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ app/
+COPY config/ config/
+COPY scripts/ scripts/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

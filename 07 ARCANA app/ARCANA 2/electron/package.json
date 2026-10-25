@@ -1,0 +1,53 @@
+{
+  "name": "arcana",
+  "version": "1.0.0",
+  "description": "ARCANA — lncRNA Co-expression Analysis Platform",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-mac": "electron-builder --mac --dir",
+    "dist": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.arcana.lncrna",
+    "productName": "ARCANA",
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "assets/icon.icns",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../",
+        "to": "arcana",
+        "filter": [
+          "app/**",
+          "config/**",
+          "scripts/**",
+          "requirements.txt",
+          "!venv/**",
+          "!results/**",
+          "!data/**",
+          "!arcana_runs.db",
+          "!arcana_docs.db",
+          "!.git/**",
+          "!electron/**"
+        ]
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}

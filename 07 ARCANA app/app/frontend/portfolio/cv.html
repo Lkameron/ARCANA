@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Leina Kameron — CV</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #1a1a2e;
+    background: #f4f4f0;
+    line-height: 1.5;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 1.5rem auto;
+    background: #fff;
+    padding: 14mm 16mm 12mm;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.12);
+  }
+
+  /* ── Header ── */
+  .cv-header {
+    border-bottom: 2.5px solid #1a1a2e;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+  .cv-name {
+    font-size: 24pt;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #1a1a2e;
+    margin-bottom: 3px;
+  }
+  .cv-title {
+    font-size: 11pt;
+    font-weight: 400;
+    color: #4a5568;
+    margin-bottom: 8px;
+  }
+  .cv-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 20px;
+    font-size: 9pt;
+    color: #4a5568;
+  }
+  .cv-contacts a { color: #2d6a4f; text-decoration: none; }
+  .cv-contacts span::before { content: "·  "; }
+  .cv-contacts span:first-child::before { content: ""; }
+
+  /* ── Sections ── */
+  section { margin-bottom: 12px; }
+
+  .section-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: #2d6a4f;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 3px;
+    margin-bottom: 8px;
+  }
+
+  /* ── Profile ── */
+  .profile p {
+    font-size: 10pt;
+    color: #2d3748;
+    line-height: 1.6;
+  }
+
+  /* ── Education ── */
+  .edu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .edu-left {}
+  .edu-degree { font-weight: 600; font-size: 10.5pt; color: #1a1a2e; }
+  .edu-institution { font-size: 9.5pt; color: #4a5568; }
+  .edu-detail { font-size: 9pt; color: #718096; margin-top: 2px; }
+  .edu-date { font-size: 9pt; color: #4a5568; white-space: nowrap; margin-left: 16px; padding-top: 2px; }
+
+  /* ── Projects ── */
+  .project { margin-bottom: 10px; }
+  .project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .project-name { font-weight: 600; font-size: 10.5pt; color: #1a1a2e; }
+  .project-tech { font-size: 8.5pt; color: #2d6a4f; font-style: italic; }
+  .project-sub { font-size: 9pt; color: #4a5568; margin-bottom: 3px; }
+  ul.bullets { padding-left: 14px; }
+  ul.bullets li {
+    font-size: 9.5pt;
+    color: #2d3748;
+    margin-bottom: 2px;
+    line-height: 1.5;
+  }
+  ul.bullets li::marker { color: #2d6a4f; }
+
+  /* ── Skills ── */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 4px 10px;
+  }
+  .skill-cat {
+    font-weight: 600;
+    font-size: 9pt;
+    color: #1a1a2e;
+    padding-top: 1px;
+  }
+  .skill-vals {
+    font-size: 9.5pt;
+    color: #2d3748;
+  }
+
+  /* ── Tags ── */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tag {
+    font-size: 8pt;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: #ebf8f1;
+    color: #276749;
+    font-weight: 500;
+    border: 1px solid #c6f6d5;
+  }
+
+  /* ── Coursework ── */
+  .course-list { font-size: 9.5pt; color: #2d3748; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; box-shadow: none; padding: 10mm 13mm; }
+    @page { size: A4; margin: 0; }
+  }
+
+  @media (max-width: 680px) {
+    .page { width: 100%; margin: 0; padding: 6mm 5mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header class="cv-header">
+    <div class="cv-name">Leina Kameron</div>
+    <div class="cv-title">MSc Bioinformatics Candidate · Computational Biology &amp; RNA-seq Analysis</div>
+    <div class="cv-contacts">
+      <span>lkameron2002@gmail.com</span>
+      <span>London, UK</span>
+      <span><a href="#">linkedin.com/in/leinakameron</a></span>
+      <span><a href="#">github.com/lkameron</a></span>
+    </div>
+  </header>
+
+  <!-- ── Profile ── -->
+  <section class="profile">
+    <div class="section-label">Profile</div>
+    <p>Bioscience graduate with an MSc in Bioinformatics, specialised in transcriptomic data analysis, RNA-seq pipelines, and co-expression network analysis. Built a fully functional standalone research software platform (ARCANA) integrating DESeq2, WGCNA, and machine learning to study lncRNA networks in pancreatic islets in Type 2 Diabetes. Comfortable working independently at the interface of wet-lab biology and computational analysis, with a rigorous approach to data quality, reproducibility, and publication-ready output.</p>
+  </section>
+
+  <!-- ── Education ── -->
+  <section>
+    <div class="section-label">Education</div>
+
+    <div class="edu-row">
+      <div class="edu-left">
+        <div class="edu-degree">MSc Bioinformatics</div>
+        <div class="edu-institution">Birkbeck, University of London</div>
+        <div class="edu-detail">Dissertation: ARCANA — lncRNA Co-expression Network Analysis Platform for Pancreatic Islet T2D Research (GSE164416)</div>
+      </div>
+      <div class="edu-date">2024 – Present</div>
+    </div>
+
+    <div class="edu-row">
+      <div class="edu-left">
+        <div class="edu-degree">BSc Bioscience</div>
+        <div class="edu-institution">Manchester Metropolitan University</div>
+        <div class="edu-detail">Foundations in molecular biology, cell biology, genetics, biochemistry, and laboratory techniques</div>
+      </div>
+      <div class="edu-date">2021 – 2024</div>
+    </div>
+  </section>
+
+  <!-- ── Key Project ── -->
+  <section>
+    <div class="section-label">Research Project</div>
+
+    <div class="project">
+      <div class="project-header">
+        <span class="project-name">ARCANA — lncRNA Co-expression Analysis Platform</span>
+        <span class="project-tech">Python · R · JavaScript · FastAPI · XGBoost</span>
+      </div>
+      <div class="project-sub">MSc Dissertation · Birkbeck University · 2024–Present · Dataset: GSE164416 (36 pancreatic islet donors; T2D, IGT, ND)</div>
+      <ul class="bullets">
+        <li>Designed and built a full end-to-end RNA-seq analysis pipeline handling quality control, normalisation, differential expression (DESeq2, apeglm shrinkage), and co-expression network construction (WGCNA) — producing <strong>30 gene modules</strong> and identifying <strong>604 significant differentially expressed genes</strong> across T2D vs ND, IGT vs ND, and T2D vs IGT comparisons.</li>
+        <li>Ranked hub lncRNAs in disease-associated modules using intramodular connectivity, eigengene correlation, and an <strong>XGBoost machine learning classifier</strong> (5-fold cross-validation) with SHAP explainability to derive per-gene importance scores.</li>
+        <li>Engineered a <strong>standalone web application</strong> (FastAPI backend + live dashboard frontend) with WebSocket progress streaming, SQLite run-history database, full-text document search, and a REST API — making the full analysis pipeline operable without the command line.</li>
+        <li>Generated 19 publication-quality figures (300 dpi PNG / PDF / SVG) with auto-written methods text, figure legends, and supplementary hub gene cards.</li>
+        <li>Resolved complex environment compatibility issues across Python, R, and macOS to achieve a reproducible, portable installation (conda environment + requirements file).</li>
+      </ul>
+      <div class="tag-row">
+        <span class="tag">DESeq2</span>
+        <span class="tag">WGCNA</span>
+        <span class="tag">XGBoost</span>
+        <span class="tag">SHAP</span>
+        <span class="tag">RNA-seq</span>
+        <span class="tag">lncRNA</span>
+        <span class="tag">FastAPI</span>
+        <span class="tag">SQLite</span>
+        <span class="tag">pandas</span>
+        <span class="tag">ggplot2</span>
+        <span class="tag">Bioconductor</span>
+        <span class="tag">matplotlib</span>
+        <span class="tag">seaborn</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Skills ── -->
+  <section>
+    <div class="section-label">Technical Skills</div>
+    <div class="skills-grid">
+      <span class="skill-cat">Languages</span>
+      <span class="skill-vals">Python (advanced), R (advanced), JavaScript, Bash / Shell scripting</span>
+
+      <span class="skill-cat">Bioinformatics</span>
+      <span class="skill-vals">RNA-seq pipeline design, DESeq2, WGCNA, Bioconductor, gene annotation (Ensembl / BioMart), lncRNA classification, bulk transcriptomics</span>
+
+      <span class="skill-cat">Machine Learning</span>
+      <span class="skill-vals">XGBoost, scikit-learn, SHAP explainability, cross-validation, feature ranking</span>
+
+      <span class="skill-cat">Data Analysis</span>
+      <span class="skill-vals">pandas, numpy, scipy, statistical hypothesis testing, PCA, UMAP, clustering</span>
+
+      <span class="skill-cat">Visualisation</span>
+      <span class="skill-vals">ggplot2, matplotlib, seaborn, publication-ready 300 dpi figure generation</span>
+
+      <span class="skill-cat">Software / Tools</span>
+      <span class="skill-vals">FastAPI, SQLite, conda / pip, Git, WebSocket, REST APIs, uvicorn, Linux / macOS CLI</span>
+
+      <span class="skill-cat">Biological Knowledge</span>
+      <span class="skill-vals">Transcriptomics, lncRNA biology, pancreatic islet physiology, Type 2 Diabetes molecular mechanisms, gene regulation</span>
+    </div>
+  </section>
+
+  <!-- ── Relevant Coursework ── -->
+  <section>
+    <div class="section-label">Relevant Coursework</div>
+    <p class="course-list">Genomics &amp; Transcriptomics · Statistical Bioinformatics · Machine Learning for Biosciences · Molecular Biology &amp; Genetics · Cell Biology · Biochemistry · Database Systems · Scientific Programming</p>
+  </section>
+
+  <!-- ── Competencies ── -->
+  <section>
+    <div class="section-label">Key Competencies</div>
+    <ul class="bullets">
+      <li>Experienced in handling large, multi-sample genomic datasets with rigorous QC, normalisation, and reproducible analytical workflows</li>
+      <li>Strong scientific writing: can produce methods sections, results summaries, and figure legends to publication standard</li>
+      <li>Independent problem-solver: debugged complex cross-platform dependency conflicts across Python, R, and macOS system libraries</li>
+      <li>Able to communicate technical results clearly in written and visual form for both specialist and non-specialist audiences</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

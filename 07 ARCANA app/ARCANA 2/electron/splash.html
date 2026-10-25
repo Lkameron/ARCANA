@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    -webkit-app-region: drag;
+  }
+
+  .card {
+    background: #0d0d14;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    width: 440px;
+    padding: 3rem 2.5rem 2.5rem;
+    text-align: center;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+  }
+
+  .logo {
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #e8d5a3;
+    margin-bottom: 0.25rem;
+  }
+
+  .logo em {
+    color: #c97d7d;
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .tagline {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2.2rem;
+  }
+
+  .status {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 1.2rem;
+  }
+
+  .bar-track {
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c97d7d, #e8d5a3);
+    border-radius: 2px;
+    animation: progress 2.5s ease-in-out infinite;
+    transform-origin: left;
+  }
+
+  @keyframes progress {
+    0%   { transform: scaleX(0);   opacity: 1; }
+    70%  { transform: scaleX(0.85); opacity: 1; }
+    100% { transform: scaleX(1);   opacity: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">ARCANA / <em>lncRNA</em></div>
+    <div class="tagline">Co-expression Analysis Platform</div>
+    <div class="status" id="status">Starting analysis engine…</div>
+    <div class="bar-track"><div class="bar-fill"></div></div>
+  </div>
+
+  <script>
+    const msgs = [
+      'Starting analysis engine…',
+      'Loading pipeline scripts…',
+      'Connecting to backend…',
+      'Almost ready…',
+    ];
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % msgs.length;
+      document.getElementById('status').textContent = msgs[i];
+    }, 900);
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+#!/bin/bash
+# ARCANA desktop launcher
+# The ARCANA project folder must live alongside this .app bundle.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# .app is at ARCANA_DIR/ARCANA.app, so project root is one level above Contents/MacOS/../..
+APP_BUNDLE="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ARCANA_DIR="$(dirname "$APP_BUNDLE")"
+
+PYTHON="$ARCANA_DIR/venv/bin/python3"
+LAUNCHER="$ARCANA_DIR/launch_app.py"
+
+if [ ! -f "$PYTHON" ]; then
+  osascript -e "display alert \"ARCANA Setup Required\" message \"Please run install.sh inside the ARCANA folder first, then try again.\" as warning"
+  exit 1
+fi
+
+exec "$PYTHON" "$LAUNCHER"

@@ -1,0 +1,40 @@
+version: "3.9"
+
+# ARCANA — one-command startup
+# Usage: docker compose up
+# Then open: http://localhost:8000
+
+services:
+
+  # ── FastAPI backend + frontend ─────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount your data, results, and config so they persist outside the container
+      - ./data:/arcana/data
+      - ./results:/arcana/results
+      - ./config:/arcana/config
+      - ./scripts:/arcana/scripts
+    environment:
+      - ARCANA_SCRIPTS_DIR=/arcana/scripts
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # ── Ollama — local AI (llama3.2 runs entirely on your machine) ────────────
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama   # persists downloaded models
+    restart: unless-stopped
+    # After first launch, pull the model:
+    #   docker compose exec ollama ollama pull llama3.2
+
+volumes:
+  ollama_models:

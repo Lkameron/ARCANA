@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ARCANA — Project Configuration
+# This is the ONLY file you need to edit to run ARCANA on your own dataset.
+# All scripts, the backend, and the AI assistant read their settings from here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+project:
+  name: "My RNA-seq Study"              # Give your project a name
+  dataset_id: "GSE000000"              # GEO accession or any identifier
+  description: >
+    Describe your dataset here.
+    This text appears in reports and the AI assistant's context.
+
+# ─── Species & genome ─────────────────────────────────────────────────────────
+species:
+  name: "human"           # human | mouse | rat
+  genome: "GRCh38"        # GRCh38 | GRCm39 | Rnor_6.0
+  ensembl_version: 109
+
+# ─── Input data paths (relative to project root) ──────────────────────────────
+data:
+  counts_matrix: "data/processed/counts_matrix.tsv"   # genes x samples (raw counts)
+  metadata:      "data/metadata/sample_metadata.csv"  # one row per sample
+
+# ─── Metadata column names ────────────────────────────────────────────────────
+# These must exactly match column headers in your metadata CSV.
+metadata:
+  sample_id_col: "sample_id"    # column identifying each sample
+  condition_col: "condition"    # main grouping variable (e.g. disease, treatment)
+
+# ─── Differential expression comparisons ──────────────────────────────────────
+# Define each comparison you want. group_a = treatment, group_b = reference.
+# Values must match what's in your condition_col column.
+comparisons:
+  - name: "Treatment_vs_Control"
+    group_a: "Treatment"
+    group_b: "Control"
+    label: "Treatment vs. Control"
+  # Add more comparisons as needed:
+  # - name: "Disease_vs_Control"
+  #   group_a: "Disease"
+  #   group_b: "Control"
+  #   label: "Disease vs. Control"
+
+# ─── Covariates to adjust for in DESeq2 ──────────────────────────────────────
+# Leave empty [] if none. Must be column names in your metadata CSV.
+de_covariates: []   # e.g. ["age", "sex", "batch"]
+
+# ─── Trait correlations for module-trait heatmap ─────────────────────────────
+# Columns in your metadata to correlate with WGCNA module eigengenes.
+traits:
+  continuous: []    # e.g. [age, bmi, glucose]
+  binary: []        # e.g. [status_disease]
+
+# ─── WGCNA settings ───────────────────────────────────────────────────────────
+wgcna:
+  soft_power: null        # null = auto-detect from scale-free topology
+  min_module_size: 30
+  merge_cut_height: 0.25
+  n_focus_modules: 5      # top N trait-associated modules for hub gene analysis
+
+# ─── DE thresholds ────────────────────────────────────────────────────────────
+de_thresholds:
+  padj: 0.05
+  log2fc: 1.0
+
+# ─── lncRNA focus ─────────────────────────────────────────────────────────────
+lncrna:
+  enabled: true            # set false to run on all gene biotypes equally
+  biotypes:                # Ensembl biotype labels classed as lncRNA
+    - lncRNA
+    - processed_transcript
+    - retained_intron
+    - antisense_RNA
+    - sense_overlapping
+    - sense_intronic
+
+# ─── Output ───────────────────────────────────────────────────────────────────
+output:
+  results_dir: "results"
+  figures_dpi: 300
+  figures_formats: [png, pdf]
